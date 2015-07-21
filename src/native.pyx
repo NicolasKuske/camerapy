@@ -19,8 +19,8 @@ cdef class PyCamM:
     def are_cameras_down(self):       #Check and see if all cameras are shutdown
         return self.thisptr.AreCamerasShutdown()
 
-    def get_a_cam(self):              #Get a random attached & initialized camera
-        return self.thisprt.GetCamera()
+#    def get_a_cam(self):              #Get a random attached & initialized camera
+ #       return self.thisptr.GetCamera()
 
 
 cdef class PyCam:
