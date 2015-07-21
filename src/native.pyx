@@ -13,15 +13,26 @@ cdef class PyCamM:
     def wait_init(self):             #Optional execution stall until cameras are init'd
         return self.thisptr.WaitForInitialization()
 
+    def shut_down(self):              #Shutdown Camera Library
+        return self.thisptr.Shutdown()
 
-cdef Camera * thissptr
+    def are_cameras_down(self):       #Check and see if all cameras are shutdown
+        return self.thisptr.AreCamerasShutdown()
 
-thissptr=GetCamera()
 
-def set_light(self, enabled, value):
-    thissptr.SetNumeric(enabled, value)
-    print "lights set"
+cdef class PyCam:
+    cdef Camera * thissptr           # hold a C++ instance which we're wrapping
 
-#doesnt work like this because thissptr is a
-#python object or so. I think I read solution in
-#cython doc. Also look at the camera control doc.
+    def __cinit__(self):
+        self.thissptr = new Camera()
+
+    def set_light(self, enabled, value):  #Turn on/off numeric camera LEDs
+        self.thissptr.SetNumeric(enabled, value)
+        print "lights set"
+
+    def releasecam(self):     #Call this when you're done with a camera
+        self.thissptr.Release()
+        print "camera released"
+
+
+
