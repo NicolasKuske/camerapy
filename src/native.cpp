@@ -274,10 +274,6 @@ class __Pyx_FakeReference {
 #define __PYX_HAVE__native
 #define __PYX_HAVE_API__native
 #include "camera.h"
-#include "ios"
-#include "new"
-#include "stdexcept"
-#include "typeinfo"
 #include "cameramanager.h"
 #ifdef _OPENMP
 #include <omp.h>
@@ -489,16 +485,16 @@ struct __pyx_obj_6native_PyCamM {
 };
 
 
-/* "native.pyx":26
+/* "native.pyx":34
  * 
  * 
  * cdef class PyCam:             # <<<<<<<<<<<<<<
- *     cdef Camera * thissptr           # hold a C++ instance which we're wrapping
+ *     cdef Camera *thisptr           # hold a C++ instance which we're wrapping
  * 
  */
 struct __pyx_obj_6native_PyCam {
   PyObject_HEAD
-  CameraLibrary::Camera *thissptr;
+  CameraLibrary::Camera *thisptr;
 };
 
 
@@ -570,6 +566,12 @@ static void __Pyx_RaiseArgtupleInvalid(const char* func_name, int exact,
 
 static CYTHON_INLINE int __Pyx_CheckKeywordStrings(PyObject *kwdict, const char* function_name, int kw_allowed);
 
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg, PyObject *kw);
+#else
+#define __Pyx_PyObject_Call(func, arg, kw) PyObject_Call(func, arg, kw)
+#endif
+
 static void __Pyx_RaiseDoubleKeywordsError(const char* func_name, PyObject* kw_name);
 
 static int __Pyx_ParseOptionalKeywords(PyObject *kwds, PyObject **argnames[], \
@@ -592,45 +594,6 @@ static void __pyx_insert_code_object(int code_line, PyCodeObject* code_object);
 
 static void __Pyx_AddTraceback(const char *funcname, int c_line,
                                int py_line, const char *filename);
-
-#ifndef __Pyx_CppExn2PyErr
-#include <new>
-#include <typeinfo>
-#include <stdexcept>
-#include <ios>
-static void __Pyx_CppExn2PyErr() {
-  try {
-    if (PyErr_Occurred())
-      ; // let the latest Python exn pass through and ignore the current one
-    else
-      throw;
-  } catch (const std::bad_alloc& exn) {
-    PyErr_SetString(PyExc_MemoryError, exn.what());
-  } catch (const std::bad_cast& exn) {
-    PyErr_SetString(PyExc_TypeError, exn.what());
-  } catch (const std::domain_error& exn) {
-    PyErr_SetString(PyExc_ValueError, exn.what());
-  } catch (const std::invalid_argument& exn) {
-    PyErr_SetString(PyExc_ValueError, exn.what());
-  } catch (const std::ios_base::failure& exn) {
-    PyErr_SetString(PyExc_IOError, exn.what());
-  } catch (const std::out_of_range& exn) {
-    PyErr_SetString(PyExc_IndexError, exn.what());
-  } catch (const std::overflow_error& exn) {
-    PyErr_SetString(PyExc_OverflowError, exn.what());
-  } catch (const std::range_error& exn) {
-    PyErr_SetString(PyExc_ArithmeticError, exn.what());
-  } catch (const std::underflow_error& exn) {
-    PyErr_SetString(PyExc_ArithmeticError, exn.what());
-  } catch (const std::exception& exn) {
-    PyErr_SetString(PyExc_RuntimeError, exn.what());
-  }
-  catch (...)
-  {
-    PyErr_SetString(PyExc_RuntimeError, "Unknown exception");
-  }
-}
-#endif
 
 static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
 
@@ -664,6 +627,7 @@ static int __pyx_pf_6native_6PyCamM___cinit__(struct __pyx_obj_6native_PyCamM *_
 static PyObject *__pyx_pf_6native_6PyCamM_2wait_init(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_6native_6PyCamM_4shut_down(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_6native_6PyCamM_6are_cameras_down(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_6PyCamM_8get_a_cam(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
 static int __pyx_pf_6native_5PyCam___cinit__(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_2set_light(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enabled, PyObject *__pyx_v_value); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_4releasecam(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
@@ -905,7 +869,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_6are_cameras_down(struct __pyx_obj_6na
  *     def are_cameras_down(self):       #Check and see if all cameras are shutdown
  *         return self.thisptr.AreCamerasShutdown()             # <<<<<<<<<<<<<<
  * 
- * #    def get_a_cam(self):              #Get a random attached & initialized camera
+ *     def get_a_cam(self):              #Get a random attached & initialized camera
  */
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->AreCamerasShutdown()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
@@ -933,11 +897,95 @@ static PyObject *__pyx_pf_6native_6PyCamM_6are_cameras_down(struct __pyx_obj_6na
   return __pyx_r;
 }
 
-/* "native.pyx":29
- *     cdef Camera * thissptr           # hold a C++ instance which we're wrapping
+/* "native.pyx":22
+ *         return self.thisptr.AreCamerasShutdown()
+ * 
+ *     def get_a_cam(self):              #Get a random attached & initialized camera             # <<<<<<<<<<<<<<
+ *         cam = PyCam()
+ *         cam.thisptr = self.thisptr.GetCamera()
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_6PyCamM_9get_a_cam(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_6PyCamM_9get_a_cam(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("get_a_cam (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_6PyCamM_8get_a_cam(((struct __pyx_obj_6native_PyCamM *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_6PyCamM_8get_a_cam(struct __pyx_obj_6native_PyCamM *__pyx_v_self) {
+  struct __pyx_obj_6native_PyCam *__pyx_v_cam = NULL;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("get_a_cam", 0);
+
+  /* "native.pyx":23
+ * 
+ *     def get_a_cam(self):              #Get a random attached & initialized camera
+ *         cam = PyCam()             # <<<<<<<<<<<<<<
+ *         cam.thisptr = self.thisptr.GetCamera()
+ *         return cam
+ */
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)((PyObject*)__pyx_ptype_6native_PyCam)), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 23; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_v_cam = ((struct __pyx_obj_6native_PyCam *)__pyx_t_1);
+  __pyx_t_1 = 0;
+
+  /* "native.pyx":24
+ *     def get_a_cam(self):              #Get a random attached & initialized camera
+ *         cam = PyCam()
+ *         cam.thisptr = self.thisptr.GetCamera()             # <<<<<<<<<<<<<<
+ *         return cam
+ * 
+ */
+  __pyx_v_cam->thisptr = __pyx_v_self->thisptr->GetCamera();
+
+  /* "native.pyx":25
+ *         cam = PyCam()
+ *         cam.thisptr = self.thisptr.GetCamera()
+ *         return cam             # <<<<<<<<<<<<<<
+ * 
+ *    # def get_cam(self):
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_INCREF(((PyObject *)__pyx_v_cam));
+  __pyx_r = ((PyObject *)__pyx_v_cam);
+  goto __pyx_L0;
+
+  /* "native.pyx":22
+ *         return self.thisptr.AreCamerasShutdown()
+ * 
+ *     def get_a_cam(self):              #Get a random attached & initialized camera             # <<<<<<<<<<<<<<
+ *         cam = PyCam()
+ *         cam.thisptr = self.thisptr.GetCamera()
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("native.PyCamM.get_a_cam", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XDECREF((PyObject *)__pyx_v_cam);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":40
+ *  #     self.thisptr = thisptr
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
- *         self.thissptr = new Camera()
+ *         self.thisptr = NULL
  * 
  */
 
@@ -960,51 +1008,36 @@ static int __pyx_pw_6native_5PyCam_1__cinit__(PyObject *__pyx_v_self, PyObject *
 static int __pyx_pf_6native_5PyCam___cinit__(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
   int __pyx_r;
   __Pyx_RefNannyDeclarations
-  CameraLibrary::Camera *__pyx_t_1;
-  int __pyx_lineno = 0;
-  const char *__pyx_filename = NULL;
-  int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "native.pyx":30
+  /* "native.pyx":41
  * 
  *     def __cinit__(self):
- *         self.thissptr = new Camera()             # <<<<<<<<<<<<<<
+ *         self.thisptr = NULL             # <<<<<<<<<<<<<<
  * 
  *     def set_light(self, enabled, value):  #Turn on/off numeric camera LEDs
  */
-  try {
-    __pyx_t_1 = new CameraLibrary::Camera();
-  } catch(...) {
-    __Pyx_CppExn2PyErr();
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 30; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  }
-  __pyx_v_self->thissptr = __pyx_t_1;
+  __pyx_v_self->thisptr = NULL;
 
-  /* "native.pyx":29
- *     cdef Camera * thissptr           # hold a C++ instance which we're wrapping
+  /* "native.pyx":40
+ *  #     self.thisptr = thisptr
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
- *         self.thissptr = new Camera()
+ *         self.thisptr = NULL
  * 
  */
 
   /* function exit code */
   __pyx_r = 0;
-  goto __pyx_L0;
-  __pyx_L1_error:;
-  __Pyx_AddTraceback("native.PyCam.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
-  __pyx_r = -1;
-  __pyx_L0:;
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-/* "native.pyx":32
- *         self.thissptr = new Camera()
+/* "native.pyx":43
+ *         self.thisptr = NULL
  * 
  *     def set_light(self, enabled, value):  #Turn on/off numeric camera LEDs             # <<<<<<<<<<<<<<
- *         self.thissptr.SetNumeric(enabled, value)
+ *         self.thisptr.SetNumeric(enabled, value)
  *         print "lights set"
  */
 
@@ -1039,11 +1072,11 @@ static PyObject *__pyx_pw_6native_5PyCam_3set_light(PyObject *__pyx_v_self, PyOb
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_value)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("set_light", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("set_light", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_light") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_light") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -1056,7 +1089,7 @@ static PyObject *__pyx_pw_6native_5PyCam_3set_light(PyObject *__pyx_v_self, PyOb
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("set_light", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("set_light", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("native.PyCam.set_light", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -1079,31 +1112,31 @@ static PyObject *__pyx_pf_6native_5PyCam_2set_light(struct __pyx_obj_6native_PyC
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_light", 0);
 
-  /* "native.pyx":33
+  /* "native.pyx":44
  * 
  *     def set_light(self, enabled, value):  #Turn on/off numeric camera LEDs
- *         self.thissptr.SetNumeric(enabled, value)             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetNumeric(enabled, value)             # <<<<<<<<<<<<<<
  *         print "lights set"
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enabled); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 33; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 33; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_v_self->thissptr->SetNumeric(__pyx_t_1, __pyx_t_2);
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enabled); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 44; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 44; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetNumeric(__pyx_t_1, __pyx_t_2);
 
-  /* "native.pyx":34
+  /* "native.pyx":45
  *     def set_light(self, enabled, value):  #Turn on/off numeric camera LEDs
- *         self.thissptr.SetNumeric(enabled, value)
+ *         self.thisptr.SetNumeric(enabled, value)
  *         print "lights set"             # <<<<<<<<<<<<<<
  * 
  *     def releasecam(self):     #Call this when you're done with a camera
  */
-  if (__Pyx_PrintOne(0, __pyx_kp_s_lights_set) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 34; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (__Pyx_PrintOne(0, __pyx_kp_s_lights_set) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 45; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "native.pyx":32
- *         self.thissptr = new Camera()
+  /* "native.pyx":43
+ *         self.thisptr = NULL
  * 
  *     def set_light(self, enabled, value):  #Turn on/off numeric camera LEDs             # <<<<<<<<<<<<<<
- *         self.thissptr.SetNumeric(enabled, value)
+ *         self.thisptr.SetNumeric(enabled, value)
  *         print "lights set"
  */
 
@@ -1119,11 +1152,11 @@ static PyObject *__pyx_pf_6native_5PyCam_2set_light(struct __pyx_obj_6native_PyC
   return __pyx_r;
 }
 
-/* "native.pyx":36
+/* "native.pyx":47
  *         print "lights set"
  * 
  *     def releasecam(self):     #Call this when you're done with a camera             # <<<<<<<<<<<<<<
- *         self.thissptr.Release()
+ *         self.thisptr.Release()
  *         print "camera released"
  */
 
@@ -1148,29 +1181,29 @@ static PyObject *__pyx_pf_6native_5PyCam_4releasecam(struct __pyx_obj_6native_Py
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("releasecam", 0);
 
-  /* "native.pyx":37
+  /* "native.pyx":48
  * 
  *     def releasecam(self):     #Call this when you're done with a camera
- *         self.thissptr.Release()             # <<<<<<<<<<<<<<
+ *         self.thisptr.Release()             # <<<<<<<<<<<<<<
  *         print "camera released"
  * 
  */
-  __pyx_v_self->thissptr->Release();
+  __pyx_v_self->thisptr->Release();
 
-  /* "native.pyx":38
+  /* "native.pyx":49
  *     def releasecam(self):     #Call this when you're done with a camera
- *         self.thissptr.Release()
+ *         self.thisptr.Release()
  *         print "camera released"             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  if (__Pyx_PrintOne(0, __pyx_kp_s_camera_released) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 38; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (__Pyx_PrintOne(0, __pyx_kp_s_camera_released) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 49; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "native.pyx":36
+  /* "native.pyx":47
  *         print "lights set"
  * 
  *     def releasecam(self):     #Call this when you're done with a camera             # <<<<<<<<<<<<<<
- *         self.thissptr.Release()
+ *         self.thisptr.Release()
  *         print "camera released"
  */
 
@@ -1213,6 +1246,7 @@ static PyMethodDef __pyx_methods_6native_PyCamM[] = {
   {"wait_init", (PyCFunction)__pyx_pw_6native_6PyCamM_3wait_init, METH_NOARGS, 0},
   {"shut_down", (PyCFunction)__pyx_pw_6native_6PyCamM_5shut_down, METH_NOARGS, 0},
   {"are_cameras_down", (PyCFunction)__pyx_pw_6native_6PyCamM_7are_cameras_down, METH_NOARGS, 0},
+  {"get_a_cam", (PyCFunction)__pyx_pw_6native_6PyCamM_9get_a_cam, METH_NOARGS, 0},
   {0, 0, 0, 0}
 };
 
@@ -1497,9 +1531,9 @@ PyMODINIT_FUNC PyInit_native(void)
   __pyx_type_6native_PyCamM.tp_print = 0;
   if (PyObject_SetAttrString(__pyx_m, "PyCamM", (PyObject *)&__pyx_type_6native_PyCamM) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_ptype_6native_PyCamM = &__pyx_type_6native_PyCamM;
-  if (PyType_Ready(&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 26; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyType_Ready(&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 34; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_type_6native_PyCam.tp_print = 0;
-  if (PyObject_SetAttrString(__pyx_m, "PyCam", (PyObject *)&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 26; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyObject_SetAttrString(__pyx_m, "PyCam", (PyObject *)&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 34; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_ptype_6native_PyCam = &__pyx_type_6native_PyCam;
   /*--- Type import code ---*/
   /*--- Variable import code ---*/
@@ -1514,11 +1548,11 @@ PyMODINIT_FUNC PyInit_native(void)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_author, __pyx_n_s_Vash) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_author, __pyx_n_s_Vash) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "native.pyx":36
+  /* "native.pyx":47
  *         print "lights set"
  * 
  *     def releasecam(self):     #Call this when you're done with a camera             # <<<<<<<<<<<<<<
- *         self.thissptr.Release()
+ *         self.thisptr.Release()
  *         print "camera released"
  */
   __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
@@ -1628,6 +1662,25 @@ invalid_keyword:
     #endif
     return 0;
 }
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg, PyObject *kw) {
+    PyObject *result;
+    ternaryfunc call = func->ob_type->tp_call;
+    if (unlikely(!call))
+        return PyObject_Call(func, arg, kw);
+    if (unlikely(Py_EnterRecursiveCall((char*)" while calling a Python object")))
+        return NULL;
+    result = (*call)(func, arg, kw);
+    Py_LeaveRecursiveCall();
+    if (unlikely(!result) && unlikely(!PyErr_Occurred())) {
+        PyErr_SetString(
+            PyExc_SystemError,
+            "NULL result without error in PyObject_Call");
+    }
+    return result;
+}
+#endif
 
 static void __Pyx_RaiseDoubleKeywordsError(
     const char* func_name,

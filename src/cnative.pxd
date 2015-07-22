@@ -7,8 +7,6 @@ from libcpp cimport bool
 cdef extern from "camera.h" namespace "CameraLibrary":
     cdef cppclass Camera:
 
-        Camera() except +
-
         void SetNumeric(bool enabled , int value) #Turn on/off numeric camera LEDs
 
         void Release()              #Call this when you're done with a camera
