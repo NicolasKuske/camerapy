@@ -2,19 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="84063429-31b6-4d43-b887-611336328e25" name="Default" comment="">
-      <change type="DELETED" beforePath="C:\Users\nico\Desktop\OptiTrackPythonWrap\camerapy\build\lib.win32-2.7\cam\native.pyd" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\nico\Desktop\OptiTrackPythonWrap\camerapy\build\temp.win32-2.7\Release\src\native.exp" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\nico\Desktop\OptiTrackPythonWrap\camerapy\build\temp.win32-2.7\Release\src\native.lib" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\nico\Desktop\OptiTrackPythonWrap\camerapy\build\temp.win32-2.7\Release\src\native.obj" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\nico\Desktop\OptiTrackPythonWrap\camerapy\build\temp.win32-2.7\Release\src\native.pyd.manifest" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\nico\Desktop\OptiTrackPythonWrap\camerapy\cam\native.pyd" afterPath="" />
-      <change type="DELETED" beforePath="C:\Users\nico\Desktop\OptiTrackPythonWrap\camerapy\src\native.cpp" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/cam/__init__.py" afterPath="$PROJECT_DIR$/cam/__init__.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/camerapy.iml" afterPath="$PROJECT_DIR$/.idea/camerapy.iml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/temp.win32-2.7/Release/src/native.exp" afterPath="$PROJECT_DIR$/build/temp.win32-2.7/Release/src/native.exp" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/temp.win32-2.7/Release/src/native.lib" afterPath="$PROJECT_DIR$/build/temp.win32-2.7/Release/src/native.lib" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/temp.win32-2.7/Release/src/native.obj" afterPath="$PROJECT_DIR$/build/temp.win32-2.7/Release/src/native.obj" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/build/lib.win32-2.7/cam/native.pyd" afterPath="$PROJECT_DIR$/build/lib.win32-2.7/cam/native.pyd" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/cam/native.pyd" afterPath="$PROJECT_DIR$/cam/native.pyd" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/cnative.pxd" afterPath="$PROJECT_DIR$/src/cnative.pxd" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/native.cpp" afterPath="$PROJECT_DIR$/src/native.cpp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/native.pyx" afterPath="$PROJECT_DIR$/src/native.pyx" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/setup.py" afterPath="$PROJECT_DIR$/setup.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="camerapy.iws" />
@@ -55,21 +50,21 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="native.pyx" pinned="false" current-in-tab="true">
+      <file leaf-file-name="native.pyx" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/native.pyx">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="5.607843">
-              <caret line="46" column="30" selection-start-line="46" selection-start-column="30" selection-end-line="46" selection-end-column="30" />
+            <state vertical-scroll-proportion="-18.214285">
+              <caret line="51" column="46" selection-start-line="51" selection-start-column="46" selection-end-line="51" selection-end-column="46" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="cnative.pxd" pinned="false" current-in-tab="false">
+      <file leaf-file-name="cnative.pxd" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/cnative.pxd">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="61" column="53" selection-start-line="61" selection-start-column="53" selection-end-line="61" selection-end-column="53" />
+            <state vertical-scroll-proportion="0.45822102">
+              <caret line="23" column="14" selection-start-line="23" selection-start-column="14" selection-end-line="23" selection-end-column="14" />
               <folding />
             </state>
           </provider>
@@ -78,7 +73,7 @@
       <file leaf-file-name="__init__.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/cam/__init__.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
+            <state vertical-scroll-proportion="-0.60714287">
               <caret line="1" column="0" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
               <folding />
             </state>
@@ -105,8 +100,8 @@
         <option value="$PROJECT_DIR$/src/cnative.pxd.py" />
         <option value="$PROJECT_DIR$/cam/__init__.py" />
         <option value="$PROJECT_DIR$/setup.py" />
-        <option value="$PROJECT_DIR$/src/native.pyx" />
         <option value="$PROJECT_DIR$/src/cnative.pxd" />
+        <option value="$PROJECT_DIR$/src/native.pyx" />
       </list>
     </option>
   </component>
@@ -119,8 +114,9 @@
   </component>
   <component name="ProjectFrameBounds">
     <option name="x" value="-4" />
-    <option name="width" value="1692" />
-    <option name="height" value="1012" />
+    <option name="y" value="-4" />
+    <option name="width" value="1928" />
+    <option name="height" value="1176" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <OptionsSetting value="true" id="Add" />
@@ -145,7 +141,7 @@
       <sortByType />
     </navigator>
     <panes>
-      <pane id="Scratches" />
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -194,7 +190,7 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scope" />
+      <pane id="Scratches" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -409,10 +405,10 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-4" y="0" width="1692" height="1012" extended-state="0" />
-    <editor active="false" />
+    <frame x="-4" y="-4" width="1928" height="1176" extended-state="6" />
+    <editor active="true" />
     <layout>
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.18502994" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.18710022" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32950193" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Application Servers" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
@@ -420,7 +416,7 @@
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3295063" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32950193" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.84041333" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.2404943" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -853,14 +849,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/cam/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="1" column="0" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/setup.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
@@ -871,18 +859,26 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/cnative.pxd">
+    <entry file="file://$PROJECT_DIR$/cam/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="61" column="53" selection-start-line="61" selection-start-column="53" selection-end-line="61" selection-end-column="53" />
+        <state vertical-scroll-proportion="-0.60714287">
+          <caret line="1" column="0" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/native.pyx">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="5.607843">
-          <caret line="46" column="30" selection-start-line="46" selection-start-column="30" selection-end-line="46" selection-end-column="30" />
+        <state vertical-scroll-proportion="-18.214285">
+          <caret line="51" column="46" selection-start-line="51" selection-start-column="46" selection-end-line="51" selection-end-column="46" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/cnative.pxd">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.45822102">
+          <caret line="23" column="14" selection-start-line="23" selection-start-column="14" selection-end-line="23" selection-end-column="14" />
           <folding />
         </state>
       </provider>

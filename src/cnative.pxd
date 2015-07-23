@@ -5,7 +5,7 @@ from libcpp cimport bool
 
 
 cdef extern from "cameratypes.h" namespace "CameraLibrary":
-    enum eStatusLEDs:
+    cpdef enum eStatusLEDs:
 
         #== Standard Status LEDs =====------
 
@@ -39,6 +39,17 @@ cdef extern from "camera.h" namespace "CameraLibrary":
         void SetNumeric(bool enable , int value)     #Turn on/off numeric camera LEDs and change the value they show
 
         void SetLED(eStatusLEDs led, bool enable)    #Turn Camera LEDs On/Off
+
+        void SetAllLED(eStatusLEDs led)              #Turn all camera LEDs On/Off
+
+        void SetStatusIntensity(int intensity)
+
+        bool RinglightEnabledWhileStopped()
+
+        void SetRinglightEnabledWhileStopped(bool enable)
+
+        void SetIntensity(int value);
+
 
         void Release()                               #Call this when you're done with a camera
 

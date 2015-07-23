@@ -43,6 +43,23 @@ cdef class PyCam:
     def set_led(self, led, enable):
         self.thisptr.SetLED(led, enable)
 
+    def set_all_led(self, led):
+        self.thisptr.SetAllLED(led)
+
+    def set_status_intensity(self, intensity):
+        self.thisptr.SetStatusIntensity(intensity)
+
+    def ringlight_enabled_while_stopped(self):
+        self.thisptr.RinglightEnabledWhileStopped()
+
+    def set_ringlight_enabled_while_stopped(self,enable):
+        self.thisptr.SetRinglightEnabledWhileStopped(enable)
+
+    def set_intensity(self, value):
+        assert value < 16, "Intensity Values for IR LEDs must be in range 0-15"
+        self.thisptr.SetIntensity(value)
+
+
     def releasecam(self):                   #Call this when you're done with a camera
         self.thisptr.Release()
         print "camera released"
