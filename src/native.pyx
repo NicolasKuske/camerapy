@@ -5,21 +5,18 @@ include "cnative.pxd"
 
 
 cdef class PyCamM:
-    cdef CameraManager *thisptr      # hold a C++ instance which we're wrapping
+    cdef CameraManager *thisptr            # hold a C++ instance which we're wrapping
 
     def __cinit__(self):
         self.thisptr = &X()
 
-    def wait_init(self):             #Optional execution stall until cameras are init'd
+    def wait_for_initialization(self):     #Optional execution stall until cameras are init'd
         return self.thisptr.WaitForInitialization()
 
-    def shut_down(self):              #Shutdown Camera Library
+    def shutdown(self):                    #Shutdown Camera Library
         return self.thisptr.Shutdown()
 
-    def are_cameras_down(self):       #Check and see if all cameras are shutdown
-        return self.thisptr.AreCamerasShutdown()
-
-    def get_a_cam(self):              #Get a random attached & initialized camera
+    def get_camera(self):                  #Get a random attached & initialized camera
         cam = PyCam()
         cam.thisptr = self.thisptr.GetCamera()
         return cam
@@ -32,7 +29,7 @@ cdef class PyCamM:
 
 
 cdef class PyCam:
-    cdef Camera *thisptr           # hold a C++ instance which we're wrapping
+    cdef Camera *thisptr                    # hold a C++ instance which we're wrapping
 
 #    def __cinit__(self, Camera& thisptr):
  #     self.thisptr = thisptr
@@ -40,13 +37,16 @@ cdef class PyCam:
     def __cinit__(self):
         self.thisptr = NULL
 
-    def set_light(self, enabled, value):  #Turn on/off numeric camera LEDs
-        self.thisptr.SetNumeric(enabled, value)
-        print "lights set"
+    def set_numeric(self, enable, value):   #Turn on/off numeric camera LEDs and change the value they show
+        self.thisptr.SetNumeric(enable , value)
 
-    def releasecam(self):     #Call this when you're done with a camera
+    def set_led(self, led, enable):
+        self.thisptr.SetLED(led, enable)
+
+    def releasecam(self):                   #Call this when you're done with a camera
         self.thisptr.Release()
         print "camera released"
+
 
 
 
