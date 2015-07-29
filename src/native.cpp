@@ -474,7 +474,7 @@ static const char *__pyx_f[] = {
 struct __pyx_obj_6native_PyCamM;
 struct __pyx_obj_6native_PyCam;
 
-/* "native.pyx":7
+/* "native.pyx":8
  * 
  * 
  * cdef class PyCamM:             # <<<<<<<<<<<<<<
@@ -487,11 +487,11 @@ struct __pyx_obj_6native_PyCamM {
 };
 
 
-/* "native.pyx":31
+/* "native.pyx":38
  * 
  * 
  * cdef class PyCam:             # <<<<<<<<<<<<<<
- *     cdef Camera *thisptr                    # hold a C++ instance which we're wrapping
+ *     cdef Camera *thisptr                                   #hold a C++ instance which we're wrapping
  * 
  */
 struct __pyx_obj_6native_PyCam {
@@ -569,9 +569,36 @@ static void __Pyx_RaiseArgtupleInvalid(const char* func_name, int exact,
 static CYTHON_INLINE int __Pyx_CheckKeywordStrings(PyObject *kwdict, const char* function_name, int kw_allowed);
 
 #if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_GetAttrStr(PyObject* obj, PyObject* attr_name) {
+    PyTypeObject* tp = Py_TYPE(obj);
+    if (likely(tp->tp_getattro))
+        return tp->tp_getattro(obj, attr_name);
+#if PY_MAJOR_VERSION < 3
+    if (likely(tp->tp_getattr))
+        return tp->tp_getattr(obj, PyString_AS_STRING(attr_name));
+#endif
+    return PyObject_GetAttr(obj, attr_name);
+}
+#else
+#define __Pyx_PyObject_GetAttrStr(o,n) PyObject_GetAttr(o,n)
+#endif
+
+#if CYTHON_COMPILING_IN_CPYTHON
 static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg, PyObject *kw);
 #else
 #define __Pyx_PyObject_Call(func, arg, kw) PyObject_Call(func, arg, kw)
+#endif
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg);
+#endif
+
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg);
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func);
+#else
+#define __Pyx_PyObject_CallNoArg(func) __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL)
 #endif
 
 static void __Pyx_RaiseDoubleKeywordsError(const char* func_name, PyObject* kw_name);
@@ -627,17 +654,55 @@ int __pyx_module_is_main_native = 0;
 /* Implementation of 'native' */
 static int __pyx_pf_6native_6PyCamM___cinit__(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_6native_6PyCamM_2wait_for_initialization(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_6native_6PyCamM_4shutdown(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_6PyCamM_4are_cameras_initialized(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_6native_6PyCamM_6get_camera(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_6PyCamM_8shutdown(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_6PyCamM_10are_cameras_shutdown(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
 static int __pyx_pf_6native_5PyCam___cinit__(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_2set_numeric(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enable, PyObject *__pyx_v_value); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_4set_led(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_led, PyObject *__pyx_v_enable); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_6set_all_led(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_led); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_8set_status_intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_intensity); /* proto */
-static PyObject *__pyx_pf_6native_5PyCam_10ringlight_enabled_while_stopped(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_6native_5PyCam_12set_ringlight_enabled_while_stopped(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enable); /* proto */
-static PyObject *__pyx_pf_6native_5PyCam_14set_intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
-static PyObject *__pyx_pf_6native_5PyCam_16releasecam(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_10status_ring_light_count(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_12ringlight_enabled_while_stopped(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_14set_ringlight_enabled_while_stopped(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enable); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_16set_intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_18intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_20minimum_intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_22maximum_intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_24set_exposure(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_26exposure(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_28minimum_exposure_value(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_30maximum_exposure_value(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_32set_frame_rate(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_34frame_rate(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_36set_frame_decimation(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_38frame_decimation(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_40actual_frame_rate(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_42minimum_frame_rate_value(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_44maximum_frame_rate_value(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_46set_ir_filter(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enabled); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_48ir_filter(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_50is_filter_switch_available(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_52set_strobe_offset(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_54strobe_offset(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_56set_agc(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enable); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_58agc(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_60is_agc_available(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_62set_aec(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enable); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_64aec(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_66is_aec_available(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_68set_threshold(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_70threshold(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_72minimum_threshold(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_74maximum_threshold(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_76set_precision_cap(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_78precision_cap(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_80set_imager_gain(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_imager_gain); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_82imager_gain(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_84imager_gain_levels(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_86is_imager_gain_available(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_88releasecam(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
 static PyObject *__pyx_tp_new_6native_PyCamM(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_6native_PyCam(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static char __pyx_k_end[] = "end";
@@ -651,7 +716,11 @@ static char __pyx_k_value[] = "value";
 static char __pyx_k_author[] = "__author__";
 static char __pyx_k_enable[] = "enable";
 static char __pyx_k_camera_released[] = "camera released";
+static char __pyx_k_are_cameras_initialized[] = "are_cameras_initialized";
+static char __pyx_k_Intensity_Values_for_IR_LEDs_mus[] = "Intensity Values for IR LEDs must be in range 0-15";
+static PyObject *__pyx_kp_s_Intensity_Values_for_IR_LEDs_mus;
 static PyObject *__pyx_n_s_Vash;
+static PyObject *__pyx_n_s_are_cameras_initialized;
 static PyObject *__pyx_n_s_author;
 static PyObject *__pyx_kp_s_camera_released;
 static PyObject *__pyx_n_s_enable;
@@ -662,8 +731,9 @@ static PyObject *__pyx_n_s_main;
 static PyObject *__pyx_n_s_print;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_value;
+static PyObject *__pyx_int_16;
 
-/* "native.pyx":10
+/* "native.pyx":11
  *     cdef CameraManager *thisptr            # hold a C++ instance which we're wrapping
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -692,7 +762,7 @@ static int __pyx_pf_6native_6PyCamM___cinit__(struct __pyx_obj_6native_PyCamM *_
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "native.pyx":11
+  /* "native.pyx":12
  * 
  *     def __cinit__(self):
  *         self.thisptr = &X()             # <<<<<<<<<<<<<<
@@ -701,7 +771,7 @@ static int __pyx_pf_6native_6PyCamM___cinit__(struct __pyx_obj_6native_PyCamM *_
  */
   __pyx_v_self->thisptr = (&CameraLibrary::CameraManager::X());
 
-  /* "native.pyx":10
+  /* "native.pyx":11
  *     cdef CameraManager *thisptr            # hold a C++ instance which we're wrapping
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -715,7 +785,7 @@ static int __pyx_pf_6native_6PyCamM___cinit__(struct __pyx_obj_6native_PyCamM *_
   return __pyx_r;
 }
 
-/* "native.pyx":13
+/* "native.pyx":14
  *         self.thisptr = &X()
  * 
  *     def wait_for_initialization(self):     #Optional execution stall until cameras are init'd             # <<<<<<<<<<<<<<
@@ -745,21 +815,21 @@ static PyObject *__pyx_pf_6native_6PyCamM_2wait_for_initialization(struct __pyx_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("wait_for_initialization", 0);
 
-  /* "native.pyx":14
+  /* "native.pyx":15
  * 
  *     def wait_for_initialization(self):     #Optional execution stall until cameras are init'd
  *         return self.thisptr.WaitForInitialization()             # <<<<<<<<<<<<<<
  * 
- *     def shutdown(self):                    #Shutdown Camera Library
+ *     def are_cameras_initialized(self):     #Check and see if all attached cameras are init'd
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->WaitForInitialization()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->WaitForInitialization()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":13
+  /* "native.pyx":14
  *         self.thisptr = &X()
  * 
  *     def wait_for_initialization(self):     #Optional execution stall until cameras are init'd             # <<<<<<<<<<<<<<
@@ -778,62 +848,84 @@ static PyObject *__pyx_pf_6native_6PyCamM_2wait_for_initialization(struct __pyx_
   return __pyx_r;
 }
 
-/* "native.pyx":16
+/* "native.pyx":17
  *         return self.thisptr.WaitForInitialization()
  * 
- *     def shutdown(self):                    #Shutdown Camera Library             # <<<<<<<<<<<<<<
- *         return self.thisptr.Shutdown()
+ *     def are_cameras_initialized(self):     #Check and see if all attached cameras are init'd             # <<<<<<<<<<<<<<
+ *         return self.are_cameras_initialized()
  * 
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6native_6PyCamM_5shutdown(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static PyObject *__pyx_pw_6native_6PyCamM_5shutdown(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+static PyObject *__pyx_pw_6native_6PyCamM_5are_cameras_initialized(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_6PyCamM_5are_cameras_initialized(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("shutdown (wrapper)", 0);
-  __pyx_r = __pyx_pf_6native_6PyCamM_4shutdown(((struct __pyx_obj_6native_PyCamM *)__pyx_v_self));
+  __Pyx_RefNannySetupContext("are_cameras_initialized (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_6PyCamM_4are_cameras_initialized(((struct __pyx_obj_6native_PyCamM *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6native_6PyCamM_4shutdown(struct __pyx_obj_6native_PyCamM *__pyx_v_self) {
+static PyObject *__pyx_pf_6native_6PyCamM_4are_cameras_initialized(struct __pyx_obj_6native_PyCamM *__pyx_v_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
-  __Pyx_RefNannySetupContext("shutdown", 0);
+  __Pyx_RefNannySetupContext("are_cameras_initialized", 0);
 
-  /* "native.pyx":17
+  /* "native.pyx":18
  * 
- *     def shutdown(self):                    #Shutdown Camera Library
- *         return self.thisptr.Shutdown()             # <<<<<<<<<<<<<<
+ *     def are_cameras_initialized(self):     #Check and see if all attached cameras are init'd
+ *         return self.are_cameras_initialized()             # <<<<<<<<<<<<<<
  * 
  *     def get_camera(self):                  #Get a random attached & initialized camera
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_void_to_None(__pyx_v_self->thisptr->Shutdown()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 17; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_are_cameras_initialized); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_t_3 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
+    __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_2);
+    if (likely(__pyx_t_3)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
+      __Pyx_INCREF(__pyx_t_3);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_2, function);
+    }
+  }
+  if (__pyx_t_3) {
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  } else {
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  }
   __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":16
+  /* "native.pyx":17
  *         return self.thisptr.WaitForInitialization()
  * 
- *     def shutdown(self):                    #Shutdown Camera Library             # <<<<<<<<<<<<<<
- *         return self.thisptr.Shutdown()
+ *     def are_cameras_initialized(self):     #Check and see if all attached cameras are init'd             # <<<<<<<<<<<<<<
+ *         return self.are_cameras_initialized()
  * 
  */
 
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("native.PyCamM.shutdown", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_AddTraceback("native.PyCamM.are_cameras_initialized", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
   __Pyx_XGIVEREF(__pyx_r);
@@ -841,8 +933,8 @@ static PyObject *__pyx_pf_6native_6PyCamM_4shutdown(struct __pyx_obj_6native_PyC
   return __pyx_r;
 }
 
-/* "native.pyx":19
- *         return self.thisptr.Shutdown()
+/* "native.pyx":20
+ *         return self.are_cameras_initialized()
  * 
  *     def get_camera(self):                  #Get a random attached & initialized camera             # <<<<<<<<<<<<<<
  *         cam = PyCam()
@@ -872,19 +964,19 @@ static PyObject *__pyx_pf_6native_6PyCamM_6get_camera(struct __pyx_obj_6native_P
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("get_camera", 0);
 
-  /* "native.pyx":20
+  /* "native.pyx":21
  * 
  *     def get_camera(self):                  #Get a random attached & initialized camera
  *         cam = PyCam()             # <<<<<<<<<<<<<<
  *         cam.thisptr = self.thisptr.GetCamera()
  *         return cam
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)((PyObject*)__pyx_ptype_6native_PyCam)), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)((PyObject*)__pyx_ptype_6native_PyCam)), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_cam = ((struct __pyx_obj_6native_PyCam *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "native.pyx":21
+  /* "native.pyx":22
  *     def get_camera(self):                  #Get a random attached & initialized camera
  *         cam = PyCam()
  *         cam.thisptr = self.thisptr.GetCamera()             # <<<<<<<<<<<<<<
@@ -893,20 +985,20 @@ static PyObject *__pyx_pf_6native_6PyCamM_6get_camera(struct __pyx_obj_6native_P
  */
   __pyx_v_cam->thisptr = __pyx_v_self->thisptr->GetCamera();
 
-  /* "native.pyx":22
+  /* "native.pyx":23
  *         cam = PyCam()
  *         cam.thisptr = self.thisptr.GetCamera()
  *         return cam             # <<<<<<<<<<<<<<
  * 
- *    # def get_cam(self):
+ * 
  */
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_cam));
   __pyx_r = ((PyObject *)__pyx_v_cam);
   goto __pyx_L0;
 
-  /* "native.pyx":19
- *         return self.thisptr.Shutdown()
+  /* "native.pyx":20
+ *         return self.are_cameras_initialized()
  * 
  *     def get_camera(self):                  #Get a random attached & initialized camera             # <<<<<<<<<<<<<<
  *         cam = PyCam()
@@ -925,7 +1017,133 @@ static PyObject *__pyx_pf_6native_6PyCamM_6get_camera(struct __pyx_obj_6native_P
   return __pyx_r;
 }
 
-/* "native.pyx":37
+/* "native.pyx":26
+ * 
+ * 
+ *     def shutdown(self):                    #Shutdown Camera Library             # <<<<<<<<<<<<<<
+ *         return self.thisptr.Shutdown()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_6PyCamM_9shutdown(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_6PyCamM_9shutdown(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("shutdown (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_6PyCamM_8shutdown(((struct __pyx_obj_6native_PyCamM *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_6PyCamM_8shutdown(struct __pyx_obj_6native_PyCamM *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("shutdown", 0);
+
+  /* "native.pyx":27
+ * 
+ *     def shutdown(self):                    #Shutdown Camera Library
+ *         return self.thisptr.Shutdown()             # <<<<<<<<<<<<<<
+ * 
+ *     def are_cameras_shutdown(self):        #Check and see if all cameras are shutdown
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = __Pyx_void_to_None(__pyx_v_self->thisptr->Shutdown()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "native.pyx":26
+ * 
+ * 
+ *     def shutdown(self):                    #Shutdown Camera Library             # <<<<<<<<<<<<<<
+ *         return self.thisptr.Shutdown()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("native.PyCamM.shutdown", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":29
+ *         return self.thisptr.Shutdown()
+ * 
+ *     def are_cameras_shutdown(self):        #Check and see if all cameras are shutdown             # <<<<<<<<<<<<<<
+ *         return self.thisptr.AreCamerasShutdown()
+ *    # def get_cam(self):
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_6PyCamM_11are_cameras_shutdown(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_6PyCamM_11are_cameras_shutdown(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("are_cameras_shutdown (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_6PyCamM_10are_cameras_shutdown(((struct __pyx_obj_6native_PyCamM *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_6PyCamM_10are_cameras_shutdown(struct __pyx_obj_6native_PyCamM *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("are_cameras_shutdown", 0);
+
+  /* "native.pyx":30
+ * 
+ *     def are_cameras_shutdown(self):        #Check and see if all cameras are shutdown
+ *         return self.thisptr.AreCamerasShutdown()             # <<<<<<<<<<<<<<
+ *    # def get_cam(self):
+ *     #    return PyCam(Camera *self.thisptr.GetCamera())
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->AreCamerasShutdown()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 30; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "native.pyx":29
+ *         return self.thisptr.Shutdown()
+ * 
+ *     def are_cameras_shutdown(self):        #Check and see if all cameras are shutdown             # <<<<<<<<<<<<<<
+ *         return self.thisptr.AreCamerasShutdown()
+ *    # def get_cam(self):
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("native.PyCamM.are_cameras_shutdown", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":44
  *  #     self.thisptr = thisptr
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -954,16 +1172,16 @@ static int __pyx_pf_6native_5PyCam___cinit__(struct __pyx_obj_6native_PyCam *__p
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "native.pyx":38
+  /* "native.pyx":45
  * 
  *     def __cinit__(self):
  *         self.thisptr = NULL             # <<<<<<<<<<<<<<
  * 
- *     def set_numeric(self, enable, value):   #Turn on/off numeric camera LEDs and change the value they show
+ *     def set_numeric(self, enable, value):                  #Turn on/off numeric camera LEDs and change the value they show
  */
   __pyx_v_self->thisptr = NULL;
 
-  /* "native.pyx":37
+  /* "native.pyx":44
  *  #     self.thisptr = thisptr
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -977,10 +1195,10 @@ static int __pyx_pf_6native_5PyCam___cinit__(struct __pyx_obj_6native_PyCam *__p
   return __pyx_r;
 }
 
-/* "native.pyx":40
+/* "native.pyx":47
  *         self.thisptr = NULL
  * 
- *     def set_numeric(self, enable, value):   #Turn on/off numeric camera LEDs and change the value they show             # <<<<<<<<<<<<<<
+ *     def set_numeric(self, enable, value):                  #Turn on/off numeric camera LEDs and change the value they show             # <<<<<<<<<<<<<<
  *         self.thisptr.SetNumeric(enable , value)
  * 
  */
@@ -1016,11 +1234,11 @@ static PyObject *__pyx_pw_6native_5PyCam_3set_numeric(PyObject *__pyx_v_self, Py
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_value)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("set_numeric", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 40; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("set_numeric", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 47; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_numeric") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 40; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_numeric") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 47; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -1033,7 +1251,7 @@ static PyObject *__pyx_pw_6native_5PyCam_3set_numeric(PyObject *__pyx_v_self, Py
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("set_numeric", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 40; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("set_numeric", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 47; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("native.PyCam.set_numeric", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -1056,21 +1274,21 @@ static PyObject *__pyx_pf_6native_5PyCam_2set_numeric(struct __pyx_obj_6native_P
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_numeric", 0);
 
-  /* "native.pyx":41
+  /* "native.pyx":48
  * 
- *     def set_numeric(self, enable, value):   #Turn on/off numeric camera LEDs and change the value they show
+ *     def set_numeric(self, enable, value):                  #Turn on/off numeric camera LEDs and change the value they show
  *         self.thisptr.SetNumeric(enable , value)             # <<<<<<<<<<<<<<
  * 
- *     def set_led(self, led, enable):
+ *     def set_led(self, led, enable):                        #Turn Camera LEDs On/Off. Could for example turn off the AimAssistLED blinking at the back of the camera when it is initialized.
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 41; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 41; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 48; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 48; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetNumeric(__pyx_t_1, __pyx_t_2);
 
-  /* "native.pyx":40
+  /* "native.pyx":47
  *         self.thisptr = NULL
  * 
- *     def set_numeric(self, enable, value):   #Turn on/off numeric camera LEDs and change the value they show             # <<<<<<<<<<<<<<
+ *     def set_numeric(self, enable, value):                  #Turn on/off numeric camera LEDs and change the value they show             # <<<<<<<<<<<<<<
  *         self.thisptr.SetNumeric(enable , value)
  * 
  */
@@ -1087,10 +1305,10 @@ static PyObject *__pyx_pf_6native_5PyCam_2set_numeric(struct __pyx_obj_6native_P
   return __pyx_r;
 }
 
-/* "native.pyx":43
+/* "native.pyx":50
  *         self.thisptr.SetNumeric(enable , value)
  * 
- *     def set_led(self, led, enable):             # <<<<<<<<<<<<<<
+ *     def set_led(self, led, enable):                        #Turn Camera LEDs On/Off. Could for example turn off the AimAssistLED blinking at the back of the camera when it is initialized.             # <<<<<<<<<<<<<<
  *         self.thisptr.SetLED(led, enable)
  * 
  */
@@ -1126,11 +1344,11 @@ static PyObject *__pyx_pw_6native_5PyCam_5set_led(PyObject *__pyx_v_self, PyObje
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_enable)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("set_led", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("set_led", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 50; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_led") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_led") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 50; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -1143,7 +1361,7 @@ static PyObject *__pyx_pw_6native_5PyCam_5set_led(PyObject *__pyx_v_self, PyObje
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("set_led", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("set_led", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 50; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("native.PyCam.set_led", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -1166,21 +1384,21 @@ static PyObject *__pyx_pf_6native_5PyCam_4set_led(struct __pyx_obj_6native_PyCam
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_led", 0);
 
-  /* "native.pyx":44
+  /* "native.pyx":51
  * 
- *     def set_led(self, led, enable):
+ *     def set_led(self, led, enable):                        #Turn Camera LEDs On/Off. Could for example turn off the AimAssistLED blinking at the back of the camera when it is initialized.
  *         self.thisptr.SetLED(led, enable)             # <<<<<<<<<<<<<<
  * 
- *     def set_all_led(self, led):
+ *     def set_all_led(self, led):                            #Turn all camera LEDs On/Off.
  */
-  __pyx_t_1 = ((enum CameraLibrary::eStatusLEDs)PyInt_AsLong(__pyx_v_led)); if (unlikely(PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 44; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_2 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 44; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = ((enum CameraLibrary::eStatusLEDs)PyInt_AsLong(__pyx_v_led)); if (unlikely(PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 51; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_2 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 51; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetLED(__pyx_t_1, __pyx_t_2);
 
-  /* "native.pyx":43
+  /* "native.pyx":50
  *         self.thisptr.SetNumeric(enable , value)
  * 
- *     def set_led(self, led, enable):             # <<<<<<<<<<<<<<
+ *     def set_led(self, led, enable):                        #Turn Camera LEDs On/Off. Could for example turn off the AimAssistLED blinking at the back of the camera when it is initialized.             # <<<<<<<<<<<<<<
  *         self.thisptr.SetLED(led, enable)
  * 
  */
@@ -1197,10 +1415,10 @@ static PyObject *__pyx_pf_6native_5PyCam_4set_led(struct __pyx_obj_6native_PyCam
   return __pyx_r;
 }
 
-/* "native.pyx":46
+/* "native.pyx":53
  *         self.thisptr.SetLED(led, enable)
  * 
- *     def set_all_led(self, led):             # <<<<<<<<<<<<<<
+ *     def set_all_led(self, led):                            #Turn all camera LEDs On/Off.             # <<<<<<<<<<<<<<
  *         self.thisptr.SetAllLED(led)
  * 
  */
@@ -1227,20 +1445,20 @@ static PyObject *__pyx_pf_6native_5PyCam_6set_all_led(struct __pyx_obj_6native_P
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_all_led", 0);
 
-  /* "native.pyx":47
+  /* "native.pyx":54
  * 
- *     def set_all_led(self, led):
+ *     def set_all_led(self, led):                            #Turn all camera LEDs On/Off.
  *         self.thisptr.SetAllLED(led)             # <<<<<<<<<<<<<<
  * 
- *     def set_status_intensity(self, intensity):
+ *     def set_status_intensity(self, intensity):             #All Status LED to (0-->255). ##So far not sure what that means
  */
-  __pyx_t_1 = ((enum CameraLibrary::eStatusLEDs)PyInt_AsLong(__pyx_v_led)); if (unlikely(PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 47; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = ((enum CameraLibrary::eStatusLEDs)PyInt_AsLong(__pyx_v_led)); if (unlikely(PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 54; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetAllLED(__pyx_t_1);
 
-  /* "native.pyx":46
+  /* "native.pyx":53
  *         self.thisptr.SetLED(led, enable)
  * 
- *     def set_all_led(self, led):             # <<<<<<<<<<<<<<
+ *     def set_all_led(self, led):                            #Turn all camera LEDs On/Off.             # <<<<<<<<<<<<<<
  *         self.thisptr.SetAllLED(led)
  * 
  */
@@ -1257,10 +1475,10 @@ static PyObject *__pyx_pf_6native_5PyCam_6set_all_led(struct __pyx_obj_6native_P
   return __pyx_r;
 }
 
-/* "native.pyx":49
+/* "native.pyx":56
  *         self.thisptr.SetAllLED(led)
  * 
- *     def set_status_intensity(self, intensity):             # <<<<<<<<<<<<<<
+ *     def set_status_intensity(self, intensity):             #All Status LED to (0-->255). ##So far not sure what that means             # <<<<<<<<<<<<<<
  *         self.thisptr.SetStatusIntensity(intensity)
  * 
  */
@@ -1287,20 +1505,20 @@ static PyObject *__pyx_pf_6native_5PyCam_8set_status_intensity(struct __pyx_obj_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_status_intensity", 0);
 
-  /* "native.pyx":50
+  /* "native.pyx":57
  * 
- *     def set_status_intensity(self, intensity):
+ *     def set_status_intensity(self, intensity):             #All Status LED to (0-->255). ##So far not sure what that means
  *         self.thisptr.SetStatusIntensity(intensity)             # <<<<<<<<<<<<<<
  * 
- *     def ringlight_enabled_while_stopped(self):
+ *     def status_ring_light_count(self):                     #Number of status ring LEDs (function is also (maybe redefined?) in camerarev26.h and 31 and 33)
  */
-  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_intensity); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 50; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_intensity); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 57; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetStatusIntensity(__pyx_t_1);
 
-  /* "native.pyx":49
+  /* "native.pyx":56
  *         self.thisptr.SetAllLED(led)
  * 
- *     def set_status_intensity(self, intensity):             # <<<<<<<<<<<<<<
+ *     def set_status_intensity(self, intensity):             #All Status LED to (0-->255). ##So far not sure what that means             # <<<<<<<<<<<<<<
  *         self.thisptr.SetStatusIntensity(intensity)
  * 
  */
@@ -1317,45 +1535,95 @@ static PyObject *__pyx_pf_6native_5PyCam_8set_status_intensity(struct __pyx_obj_
   return __pyx_r;
 }
 
-/* "native.pyx":52
+/* "native.pyx":59
  *         self.thisptr.SetStatusIntensity(intensity)
  * 
- *     def ringlight_enabled_while_stopped(self):             # <<<<<<<<<<<<<<
- *         self.thisptr.RinglightEnabledWhileStopped()
+ *     def status_ring_light_count(self):                     #Number of status ring LEDs (function is also (maybe redefined?) in camerarev26.h and 31 and 33)             # <<<<<<<<<<<<<<
+ *         self.thisptr.StatusRingLightCount()
  * 
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6native_5PyCam_11ringlight_enabled_while_stopped(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static PyObject *__pyx_pw_6native_5PyCam_11ringlight_enabled_while_stopped(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+static PyObject *__pyx_pw_6native_5PyCam_11status_ring_light_count(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_11status_ring_light_count(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("ringlight_enabled_while_stopped (wrapper)", 0);
-  __pyx_r = __pyx_pf_6native_5PyCam_10ringlight_enabled_while_stopped(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+  __Pyx_RefNannySetupContext("status_ring_light_count (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_10status_ring_light_count(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6native_5PyCam_10ringlight_enabled_while_stopped(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+static PyObject *__pyx_pf_6native_5PyCam_10status_ring_light_count(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("status_ring_light_count", 0);
+
+  /* "native.pyx":60
+ * 
+ *     def status_ring_light_count(self):                     #Number of status ring LEDs (function is also (maybe redefined?) in camerarev26.h and 31 and 33)
+ *         self.thisptr.StatusRingLightCount()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_v_self->thisptr->StatusRingLightCount();
+
+  /* "native.pyx":59
+ *         self.thisptr.SetStatusIntensity(intensity)
+ * 
+ *     def status_ring_light_count(self):                     #Number of status ring LEDs (function is also (maybe redefined?) in camerarev26.h and 31 and 33)             # <<<<<<<<<<<<<<
+ *         self.thisptr.StatusRingLightCount()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":63
+ * 
+ * 
+ *     def ringlight_enabled_while_stopped(self):             ## Should return if the function below is enabled or disabled.             # <<<<<<<<<<<<<<
+ *         self.thisptr.RinglightEnabledWhileStopped()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_13ringlight_enabled_while_stopped(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_13ringlight_enabled_while_stopped(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("ringlight_enabled_while_stopped (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_12ringlight_enabled_while_stopped(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_12ringlight_enabled_while_stopped(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("ringlight_enabled_while_stopped", 0);
 
-  /* "native.pyx":53
+  /* "native.pyx":64
  * 
- *     def ringlight_enabled_while_stopped(self):
+ *     def ringlight_enabled_while_stopped(self):             ## Should return if the function below is enabled or disabled.
  *         self.thisptr.RinglightEnabledWhileStopped()             # <<<<<<<<<<<<<<
  * 
- *     def set_ringlight_enabled_while_stopped(self,enable):
+ *     def set_ringlight_enabled_while_stopped(self,enable):  ## If remember correctly, when the cameras are initialized but do not record (i.e. are stopped) one can change intensity of ringlight. Like the IR LEDs below.
  */
   __pyx_v_self->thisptr->RinglightEnabledWhileStopped();
 
-  /* "native.pyx":52
- *         self.thisptr.SetStatusIntensity(intensity)
+  /* "native.pyx":63
  * 
- *     def ringlight_enabled_while_stopped(self):             # <<<<<<<<<<<<<<
+ * 
+ *     def ringlight_enabled_while_stopped(self):             ## Should return if the function below is enabled or disabled.             # <<<<<<<<<<<<<<
  *         self.thisptr.RinglightEnabledWhileStopped()
  * 
  */
@@ -1367,28 +1635,28 @@ static PyObject *__pyx_pf_6native_5PyCam_10ringlight_enabled_while_stopped(struc
   return __pyx_r;
 }
 
-/* "native.pyx":55
+/* "native.pyx":66
  *         self.thisptr.RinglightEnabledWhileStopped()
  * 
- *     def set_ringlight_enabled_while_stopped(self,enable):             # <<<<<<<<<<<<<<
+ *     def set_ringlight_enabled_while_stopped(self,enable):  ## If remember correctly, when the cameras are initialized but do not record (i.e. are stopped) one can change intensity of ringlight. Like the IR LEDs below.             # <<<<<<<<<<<<<<
  *         self.thisptr.SetRinglightEnabledWhileStopped(enable)
  * 
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6native_5PyCam_13set_ringlight_enabled_while_stopped(PyObject *__pyx_v_self, PyObject *__pyx_v_enable); /*proto*/
-static PyObject *__pyx_pw_6native_5PyCam_13set_ringlight_enabled_while_stopped(PyObject *__pyx_v_self, PyObject *__pyx_v_enable) {
+static PyObject *__pyx_pw_6native_5PyCam_15set_ringlight_enabled_while_stopped(PyObject *__pyx_v_self, PyObject *__pyx_v_enable); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_15set_ringlight_enabled_while_stopped(PyObject *__pyx_v_self, PyObject *__pyx_v_enable) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("set_ringlight_enabled_while_stopped (wrapper)", 0);
-  __pyx_r = __pyx_pf_6native_5PyCam_12set_ringlight_enabled_while_stopped(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_enable));
+  __pyx_r = __pyx_pf_6native_5PyCam_14set_ringlight_enabled_while_stopped(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_enable));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6native_5PyCam_12set_ringlight_enabled_while_stopped(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enable) {
+static PyObject *__pyx_pf_6native_5PyCam_14set_ringlight_enabled_while_stopped(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enable) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   bool __pyx_t_1;
@@ -1397,20 +1665,20 @@ static PyObject *__pyx_pf_6native_5PyCam_12set_ringlight_enabled_while_stopped(s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_ringlight_enabled_while_stopped", 0);
 
-  /* "native.pyx":56
+  /* "native.pyx":67
  * 
- *     def set_ringlight_enabled_while_stopped(self,enable):
+ *     def set_ringlight_enabled_while_stopped(self,enable):  ## If remember correctly, when the cameras are initialized but do not record (i.e. are stopped) one can change intensity of ringlight. Like the IR LEDs below.
  *         self.thisptr.SetRinglightEnabledWhileStopped(enable)             # <<<<<<<<<<<<<<
  * 
- *     def set_intensity(self, value):
+ *     def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the ring LEDs (so far only IR?)
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 56; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 67; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetRinglightEnabledWhileStopped(__pyx_t_1);
 
-  /* "native.pyx":55
+  /* "native.pyx":66
  *         self.thisptr.RinglightEnabledWhileStopped()
  * 
- *     def set_ringlight_enabled_while_stopped(self,enable):             # <<<<<<<<<<<<<<
+ *     def set_ringlight_enabled_while_stopped(self,enable):  ## If remember correctly, when the cameras are initialized but do not record (i.e. are stopped) one can change intensity of ringlight. Like the IR LEDs below.             # <<<<<<<<<<<<<<
  *         self.thisptr.SetRinglightEnabledWhileStopped(enable)
  * 
  */
@@ -1427,58 +1695,80 @@ static PyObject *__pyx_pf_6native_5PyCam_12set_ringlight_enabled_while_stopped(s
   return __pyx_r;
 }
 
-/* "native.pyx":58
+/* "native.pyx":69
  *         self.thisptr.SetRinglightEnabledWhileStopped(enable)
  * 
- *     def set_intensity(self, value):             # <<<<<<<<<<<<<<
+ *     def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the ring LEDs (so far only IR?)             # <<<<<<<<<<<<<<
+ *         assert value < 16, "Intensity Values for IR LEDs must be in range 0-15"
  *         self.thisptr.SetIntensity(value)
- * 
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6native_5PyCam_15set_intensity(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
-static PyObject *__pyx_pw_6native_5PyCam_15set_intensity(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+static PyObject *__pyx_pw_6native_5PyCam_17set_intensity(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_17set_intensity(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("set_intensity (wrapper)", 0);
-  __pyx_r = __pyx_pf_6native_5PyCam_14set_intensity(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+  __pyx_r = __pyx_pf_6native_5PyCam_16set_intensity(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_value));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6native_5PyCam_14set_intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value) {
+static PyObject *__pyx_pf_6native_5PyCam_16set_intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
-  int __pyx_t_1;
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_t_2;
+  int __pyx_t_3;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_intensity", 0);
 
-  /* "native.pyx":59
+  /* "native.pyx":70
  * 
- *     def set_intensity(self, value):
- *         self.thisptr.SetIntensity(value)             # <<<<<<<<<<<<<<
- * 
- * 
- */
-  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 59; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_v_self->thisptr->SetIntensity(__pyx_t_1);
-
-  /* "native.pyx":58
- *         self.thisptr.SetRinglightEnabledWhileStopped(enable)
- * 
- *     def set_intensity(self, value):             # <<<<<<<<<<<<<<
+ *     def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the ring LEDs (so far only IR?)
+ *         assert value < 16, "Intensity Values for IR LEDs must be in range 0-15"             # <<<<<<<<<<<<<<
  *         self.thisptr.SetIntensity(value)
  * 
+ */
+  #ifndef CYTHON_WITHOUT_ASSERTIONS
+  if (unlikely(!Py_OptimizeFlag)) {
+    __pyx_t_1 = PyObject_RichCompare(__pyx_v_value, __pyx_int_16, Py_LT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 70; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_2 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 70; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    if (unlikely(!__pyx_t_2)) {
+      PyErr_SetObject(PyExc_AssertionError, __pyx_kp_s_Intensity_Values_for_IR_LEDs_mus);
+      {__pyx_filename = __pyx_f[0]; __pyx_lineno = 70; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    }
+  }
+  #endif
+
+  /* "native.pyx":71
+ *     def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the ring LEDs (so far only IR?)
+ *         assert value < 16, "Intensity Values for IR LEDs must be in range 0-15"
+ *         self.thisptr.SetIntensity(value)             # <<<<<<<<<<<<<<
+ * 
+ *     def intensity(self):                                   #get camera intensity ##function is also virtual and also(maybe redefined?)in CameraRev16Child.h)
+ */
+  __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 71; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetIntensity(__pyx_t_3);
+
+  /* "native.pyx":69
+ *         self.thisptr.SetRinglightEnabledWhileStopped(enable)
+ * 
+ *     def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the ring LEDs (so far only IR?)             # <<<<<<<<<<<<<<
+ *         assert value < 16, "Intensity Values for IR LEDs must be in range 0-15"
+ *         self.thisptr.SetIntensity(value)
  */
 
   /* function exit code */
   __pyx_r = Py_None; __Pyx_INCREF(Py_None);
   goto __pyx_L0;
   __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
   __Pyx_AddTraceback("native.PyCam.set_intensity", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
@@ -1487,28 +1777,1878 @@ static PyObject *__pyx_pf_6native_5PyCam_14set_intensity(struct __pyx_obj_6nativ
   return __pyx_r;
 }
 
-/* "native.pyx":62
+/* "native.pyx":73
+ *         self.thisptr.SetIntensity(value)
  * 
+ *     def intensity(self):                                   #get camera intensity ##function is also virtual and also(maybe redefined?)in CameraRev16Child.h)             # <<<<<<<<<<<<<<
+ *         self.thisptr.Intensity()
  * 
- *     def releasecam(self):                   #Call this when you're done with a camera             # <<<<<<<<<<<<<<
- *         self.thisptr.Release()
- *         print "camera released"
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6native_5PyCam_17releasecam(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static PyObject *__pyx_pw_6native_5PyCam_17releasecam(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+static PyObject *__pyx_pw_6native_5PyCam_19intensity(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_19intensity(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("releasecam (wrapper)", 0);
-  __pyx_r = __pyx_pf_6native_5PyCam_16releasecam(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+  __Pyx_RefNannySetupContext("intensity (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_18intensity(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6native_5PyCam_16releasecam(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+static PyObject *__pyx_pf_6native_5PyCam_18intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("intensity", 0);
+
+  /* "native.pyx":74
+ * 
+ *     def intensity(self):                                   #get camera intensity ##function is also virtual and also(maybe redefined?)in CameraRev16Child.h)
+ *         self.thisptr.Intensity()             # <<<<<<<<<<<<<<
+ * 
+ *     def minimum_intensity(self):                           #Returns the minimum intensity
+ */
+  __pyx_v_self->thisptr->Intensity();
+
+  /* "native.pyx":73
+ *         self.thisptr.SetIntensity(value)
+ * 
+ *     def intensity(self):                                   #get camera intensity ##function is also virtual and also(maybe redefined?)in CameraRev16Child.h)             # <<<<<<<<<<<<<<
+ *         self.thisptr.Intensity()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":76
+ *         self.thisptr.Intensity()
+ * 
+ *     def minimum_intensity(self):                           #Returns the minimum intensity             # <<<<<<<<<<<<<<
+ *         self.thisptr.MinimumIntensity()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_21minimum_intensity(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_21minimum_intensity(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("minimum_intensity (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_20minimum_intensity(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_20minimum_intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("minimum_intensity", 0);
+
+  /* "native.pyx":77
+ * 
+ *     def minimum_intensity(self):                           #Returns the minimum intensity
+ *         self.thisptr.MinimumIntensity()             # <<<<<<<<<<<<<<
+ * 
+ *     def maximum_intensity(self):                           #Returns the maximum intensity
+ */
+  __pyx_v_self->thisptr->MinimumIntensity();
+
+  /* "native.pyx":76
+ *         self.thisptr.Intensity()
+ * 
+ *     def minimum_intensity(self):                           #Returns the minimum intensity             # <<<<<<<<<<<<<<
+ *         self.thisptr.MinimumIntensity()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":79
+ *         self.thisptr.MinimumIntensity()
+ * 
+ *     def maximum_intensity(self):                           #Returns the maximum intensity             # <<<<<<<<<<<<<<
+ *         self.thisptr.MaximumIntensity()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_23maximum_intensity(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_23maximum_intensity(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("maximum_intensity (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_22maximum_intensity(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_22maximum_intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("maximum_intensity", 0);
+
+  /* "native.pyx":80
+ * 
+ *     def maximum_intensity(self):                           #Returns the maximum intensity
+ *         self.thisptr.MaximumIntensity()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_v_self->thisptr->MaximumIntensity();
+
+  /* "native.pyx":79
+ *         self.thisptr.MinimumIntensity()
+ * 
+ *     def maximum_intensity(self):                           #Returns the maximum intensity             # <<<<<<<<<<<<<<
+ *         self.thisptr.MaximumIntensity()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":83
+ * 
+ * 
+ *     def set_exposure(self, value):                         #Set camera exposure ##In photography, shutter speed or exposure time is the length of time a camera's shutter is open when taking a photograph             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetExposure(value)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_25set_exposure(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_25set_exposure(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("set_exposure (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_24set_exposure(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_24set_exposure(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("set_exposure", 0);
+
+  /* "native.pyx":84
+ * 
+ *     def set_exposure(self, value):                         #Set camera exposure ##In photography, shutter speed or exposure time is the length of time a camera's shutter is open when taking a photograph
+ *         self.thisptr.SetExposure(value)             # <<<<<<<<<<<<<<
+ * 
+ *     def exposure(self):                                    #Get Camera Exposure
+ */
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 84; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetExposure(__pyx_t_1);
+
+  /* "native.pyx":83
+ * 
+ * 
+ *     def set_exposure(self, value):                         #Set camera exposure ##In photography, shutter speed or exposure time is the length of time a camera's shutter is open when taking a photograph             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetExposure(value)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("native.PyCam.set_exposure", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":86
+ *         self.thisptr.SetExposure(value)
+ * 
+ *     def exposure(self):                                    #Get Camera Exposure             # <<<<<<<<<<<<<<
+ *         self.thisptr.Exposure()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_27exposure(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_27exposure(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("exposure (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_26exposure(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_26exposure(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("exposure", 0);
+
+  /* "native.pyx":87
+ * 
+ *     def exposure(self):                                    #Get Camera Exposure
+ *         self.thisptr.Exposure()             # <<<<<<<<<<<<<<
+ * 
+ *     def minimum_exposure_value(self):                      #Returns the minimum camera exposure
+ */
+  __pyx_v_self->thisptr->Exposure();
+
+  /* "native.pyx":86
+ *         self.thisptr.SetExposure(value)
+ * 
+ *     def exposure(self):                                    #Get Camera Exposure             # <<<<<<<<<<<<<<
+ *         self.thisptr.Exposure()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":89
+ *         self.thisptr.Exposure()
+ * 
+ *     def minimum_exposure_value(self):                      #Returns the minimum camera exposure             # <<<<<<<<<<<<<<
+ *         self.thisptr.MinimumExposureValue()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_29minimum_exposure_value(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_29minimum_exposure_value(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("minimum_exposure_value (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_28minimum_exposure_value(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_28minimum_exposure_value(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("minimum_exposure_value", 0);
+
+  /* "native.pyx":90
+ * 
+ *     def minimum_exposure_value(self):                      #Returns the minimum camera exposure
+ *         self.thisptr.MinimumExposureValue()             # <<<<<<<<<<<<<<
+ * 
+ *     def maximum_exposure_value(self):                      #Returns the maximum camera exposure
+ */
+  __pyx_v_self->thisptr->MinimumExposureValue();
+
+  /* "native.pyx":89
+ *         self.thisptr.Exposure()
+ * 
+ *     def minimum_exposure_value(self):                      #Returns the minimum camera exposure             # <<<<<<<<<<<<<<
+ *         self.thisptr.MinimumExposureValue()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":92
+ *         self.thisptr.MinimumExposureValue()
+ * 
+ *     def maximum_exposure_value(self):                      #Returns the maximum camera exposure             # <<<<<<<<<<<<<<
+ *         self.thisptr.MaximumExposureValue()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_31maximum_exposure_value(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_31maximum_exposure_value(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("maximum_exposure_value (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_30maximum_exposure_value(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_30maximum_exposure_value(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("maximum_exposure_value", 0);
+
+  /* "native.pyx":93
+ * 
+ *     def maximum_exposure_value(self):                      #Returns the maximum camera exposure
+ *         self.thisptr.MaximumExposureValue()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_v_self->thisptr->MaximumExposureValue();
+
+  /* "native.pyx":92
+ *         self.thisptr.MinimumExposureValue()
+ * 
+ *     def maximum_exposure_value(self):                      #Returns the maximum camera exposure             # <<<<<<<<<<<<<<
+ *         self.thisptr.MaximumExposureValue()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":96
+ * 
+ * 
+ *     def set_frame_rate(self, value):                       #set camera frame rate (##function is also virtual). For Ethernet devices as well as the OptiTrack Flex 13, when calling SetFrameRate(), the value is the desired frame rate.             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetFrameRate(value)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_33set_frame_rate(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_33set_frame_rate(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("set_frame_rate (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_32set_frame_rate(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_32set_frame_rate(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("set_frame_rate", 0);
+
+  /* "native.pyx":97
+ * 
+ *     def set_frame_rate(self, value):                       #set camera frame rate (##function is also virtual). For Ethernet devices as well as the OptiTrack Flex 13, when calling SetFrameRate(), the value is the desired frame rate.
+ *         self.thisptr.SetFrameRate(value)             # <<<<<<<<<<<<<<
+ * 
+ *     def frame_rate(self):                                  #get camera frame rate (##function is also virtual)
+ */
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 97; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetFrameRate(__pyx_t_1);
+
+  /* "native.pyx":96
+ * 
+ * 
+ *     def set_frame_rate(self, value):                       #set camera frame rate (##function is also virtual). For Ethernet devices as well as the OptiTrack Flex 13, when calling SetFrameRate(), the value is the desired frame rate.             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetFrameRate(value)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("native.PyCam.set_frame_rate", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":99
+ *         self.thisptr.SetFrameRate(value)
+ * 
+ *     def frame_rate(self):                                  #get camera frame rate (##function is also virtual)             # <<<<<<<<<<<<<<
+ *         self.thisptr.FrameRate()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_35frame_rate(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_35frame_rate(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("frame_rate (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_34frame_rate(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_34frame_rate(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("frame_rate", 0);
+
+  /* "native.pyx":100
+ * 
+ *     def frame_rate(self):                                  #get camera frame rate (##function is also virtual)
+ *         self.thisptr.FrameRate()             # <<<<<<<<<<<<<<
+ * 
+ *     def set_frame_decimation(self, value):                 #set camera frame decimation ##Frame decimation reduces the number of input frames to increase pose and structure robustness in Structure and Motion (SaM) applications
+ */
+  __pyx_v_self->thisptr->FrameRate();
+
+  /* "native.pyx":99
+ *         self.thisptr.SetFrameRate(value)
+ * 
+ *     def frame_rate(self):                                  #get camera frame rate (##function is also virtual)             # <<<<<<<<<<<<<<
+ *         self.thisptr.FrameRate()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":102
+ *         self.thisptr.FrameRate()
+ * 
+ *     def set_frame_decimation(self, value):                 #set camera frame decimation ##Frame decimation reduces the number of input frames to increase pose and structure robustness in Structure and Motion (SaM) applications             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetFrameDecimation(value)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_37set_frame_decimation(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_37set_frame_decimation(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("set_frame_decimation (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_36set_frame_decimation(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_36set_frame_decimation(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("set_frame_decimation", 0);
+
+  /* "native.pyx":103
+ * 
+ *     def set_frame_decimation(self, value):                 #set camera frame decimation ##Frame decimation reduces the number of input frames to increase pose and structure robustness in Structure and Motion (SaM) applications
+ *         self.thisptr.SetFrameDecimation(value)             # <<<<<<<<<<<<<<
+ * 
+ *     def frame_decimation(self):                        #Get Camera Frame Decimation (##function is also virtual)
+ */
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 103; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetFrameDecimation(__pyx_t_1);
+
+  /* "native.pyx":102
+ *         self.thisptr.FrameRate()
+ * 
+ *     def set_frame_decimation(self, value):                 #set camera frame decimation ##Frame decimation reduces the number of input frames to increase pose and structure robustness in Structure and Motion (SaM) applications             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetFrameDecimation(value)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("native.PyCam.set_frame_decimation", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":105
+ *         self.thisptr.SetFrameDecimation(value)
+ * 
+ *     def frame_decimation(self):                        #Get Camera Frame Decimation (##function is also virtual)             # <<<<<<<<<<<<<<
+ *         self.thisptr.FrameDecimation()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_39frame_decimation(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_39frame_decimation(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("frame_decimation (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_38frame_decimation(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_38frame_decimation(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("frame_decimation", 0);
+
+  /* "native.pyx":106
+ * 
+ *     def frame_decimation(self):                        #Get Camera Frame Decimation (##function is also virtual)
+ *         self.thisptr.FrameDecimation()             # <<<<<<<<<<<<<<
+ * 
+ *     def actual_frame_rate(self):                           #Current camera frame rate (frames/sec) ##function is also virtual
+ */
+  __pyx_v_self->thisptr->FrameDecimation();
+
+  /* "native.pyx":105
+ *         self.thisptr.SetFrameDecimation(value)
+ * 
+ *     def frame_decimation(self):                        #Get Camera Frame Decimation (##function is also virtual)             # <<<<<<<<<<<<<<
+ *         self.thisptr.FrameDecimation()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":108
+ *         self.thisptr.FrameDecimation()
+ * 
+ *     def actual_frame_rate(self):                           #Current camera frame rate (frames/sec) ##function is also virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.ActualFrameRate()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_41actual_frame_rate(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_41actual_frame_rate(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("actual_frame_rate (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_40actual_frame_rate(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_40actual_frame_rate(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("actual_frame_rate", 0);
+
+  /* "native.pyx":109
+ * 
+ *     def actual_frame_rate(self):                           #Current camera frame rate (frames/sec) ##function is also virtual
+ *         self.thisptr.ActualFrameRate()             # <<<<<<<<<<<<<<
+ * 
+ *     def minimum_frame_rate_value(self):                    #returns the minimum frame rate ##function is also virtual
+ */
+  __pyx_v_self->thisptr->ActualFrameRate();
+
+  /* "native.pyx":108
+ *         self.thisptr.FrameDecimation()
+ * 
+ *     def actual_frame_rate(self):                           #Current camera frame rate (frames/sec) ##function is also virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.ActualFrameRate()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":111
+ *         self.thisptr.ActualFrameRate()
+ * 
+ *     def minimum_frame_rate_value(self):                    #returns the minimum frame rate ##function is also virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.MinimumFrameRateValue()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_43minimum_frame_rate_value(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_43minimum_frame_rate_value(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("minimum_frame_rate_value (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_42minimum_frame_rate_value(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_42minimum_frame_rate_value(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("minimum_frame_rate_value", 0);
+
+  /* "native.pyx":112
+ * 
+ *     def minimum_frame_rate_value(self):                    #returns the minimum frame rate ##function is also virtual
+ *         self.thisptr.MinimumFrameRateValue()             # <<<<<<<<<<<<<<
+ * 
+ *     def maximum_frame_rate_value(self):                    #returns the maximum frame rate ##function is also virtual
+ */
+  __pyx_v_self->thisptr->MinimumFrameRateValue();
+
+  /* "native.pyx":111
+ *         self.thisptr.ActualFrameRate()
+ * 
+ *     def minimum_frame_rate_value(self):                    #returns the minimum frame rate ##function is also virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.MinimumFrameRateValue()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":114
+ *         self.thisptr.MinimumFrameRateValue()
+ * 
+ *     def maximum_frame_rate_value(self):                    #returns the maximum frame rate ##function is also virtual             # <<<<<<<<<<<<<<
+ *        self.thisptr.MaximumFrameRateValue()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_45maximum_frame_rate_value(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_45maximum_frame_rate_value(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("maximum_frame_rate_value (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_44maximum_frame_rate_value(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_44maximum_frame_rate_value(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("maximum_frame_rate_value", 0);
+
+  /* "native.pyx":115
+ * 
+ *     def maximum_frame_rate_value(self):                    #returns the maximum frame rate ##function is also virtual
+ *        self.thisptr.MaximumFrameRateValue()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_v_self->thisptr->MaximumFrameRateValue();
+
+  /* "native.pyx":114
+ *         self.thisptr.MinimumFrameRateValue()
+ * 
+ *     def maximum_frame_rate_value(self):                    #returns the maximum frame rate ##function is also virtual             # <<<<<<<<<<<<<<
+ *        self.thisptr.MaximumFrameRateValue()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":118
+ * 
+ * 
+ *     def set_ir_filter(self, enabled):                      #Enable/Disable IR Bandpass Filter ##function is also virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetIRFilter(enabled)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_47set_ir_filter(PyObject *__pyx_v_self, PyObject *__pyx_v_enabled); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_47set_ir_filter(PyObject *__pyx_v_self, PyObject *__pyx_v_enabled) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("set_ir_filter (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_46set_ir_filter(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_enabled));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_46set_ir_filter(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enabled) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  bool __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("set_ir_filter", 0);
+
+  /* "native.pyx":119
+ * 
+ *     def set_ir_filter(self, enabled):                      #Enable/Disable IR Bandpass Filter ##function is also virtual
+ *         self.thisptr.SetIRFilter(enabled)             # <<<<<<<<<<<<<<
+ * 
+ *     def ir_filter(self):                                   ##probably returns state of IR filter above (function is also virtual)
+ */
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enabled); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 119; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetIRFilter(__pyx_t_1);
+
+  /* "native.pyx":118
+ * 
+ * 
+ *     def set_ir_filter(self, enabled):                      #Enable/Disable IR Bandpass Filter ##function is also virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetIRFilter(enabled)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("native.PyCam.set_ir_filter", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":121
+ *         self.thisptr.SetIRFilter(enabled)
+ * 
+ *     def ir_filter(self):                                   ##probably returns state of IR filter above (function is also virtual)             # <<<<<<<<<<<<<<
+ *         self.thisptr.IRFilter()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_49ir_filter(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_49ir_filter(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("ir_filter (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_48ir_filter(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_48ir_filter(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("ir_filter", 0);
+
+  /* "native.pyx":122
+ * 
+ *     def ir_filter(self):                                   ##probably returns state of IR filter above (function is also virtual)
+ *         self.thisptr.IRFilter()             # <<<<<<<<<<<<<<
+ * 
+ *     def is_filter_switch_available(self):                  ##returns false as implemented in camera.h but is virtual and probably camera dependent
+ */
+  __pyx_v_self->thisptr->IRFilter();
+
+  /* "native.pyx":121
+ *         self.thisptr.SetIRFilter(enabled)
+ * 
+ *     def ir_filter(self):                                   ##probably returns state of IR filter above (function is also virtual)             # <<<<<<<<<<<<<<
+ *         self.thisptr.IRFilter()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":124
+ *         self.thisptr.IRFilter()
+ * 
+ *     def is_filter_switch_available(self):                  ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
+ *         self.thisptr.IsFilterSwitchAvailable()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_51is_filter_switch_available(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_51is_filter_switch_available(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("is_filter_switch_available (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_50is_filter_switch_available(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_50is_filter_switch_available(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("is_filter_switch_available", 0);
+
+  /* "native.pyx":125
+ * 
+ *     def is_filter_switch_available(self):                  ##returns false as implemented in camera.h but is virtual and probably camera dependent
+ *         self.thisptr.IsFilterSwitchAvailable()             # <<<<<<<<<<<<<<
+ * 
+ *     def set_strobe_offset(self, value):                    #Set IR Illumination Delay ##(virtual) strobe and illumination delay? So switch the chip on and off? why?
+ */
+  __pyx_v_self->thisptr->IsFilterSwitchAvailable();
+
+  /* "native.pyx":124
+ *         self.thisptr.IRFilter()
+ * 
+ *     def is_filter_switch_available(self):                  ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
+ *         self.thisptr.IsFilterSwitchAvailable()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":127
+ *         self.thisptr.IsFilterSwitchAvailable()
+ * 
+ *     def set_strobe_offset(self, value):                    #Set IR Illumination Delay ##(virtual) strobe and illumination delay? So switch the chip on and off? why?             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetStrobeOffset(value)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_53set_strobe_offset(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_53set_strobe_offset(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("set_strobe_offset (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_52set_strobe_offset(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_52set_strobe_offset(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("set_strobe_offset", 0);
+
+  /* "native.pyx":128
+ * 
+ *     def set_strobe_offset(self, value):                    #Set IR Illumination Delay ##(virtual) strobe and illumination delay? So switch the chip on and off? why?
+ *         self.thisptr.SetStrobeOffset(value)             # <<<<<<<<<<<<<<
+ * 
+ *     def strobe_offset(self):                               #Get IR Illumination Delay ##virtual
+ */
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 128; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetStrobeOffset(__pyx_t_1);
+
+  /* "native.pyx":127
+ *         self.thisptr.IsFilterSwitchAvailable()
+ * 
+ *     def set_strobe_offset(self, value):                    #Set IR Illumination Delay ##(virtual) strobe and illumination delay? So switch the chip on and off? why?             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetStrobeOffset(value)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("native.PyCam.set_strobe_offset", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":130
+ *         self.thisptr.SetStrobeOffset(value)
+ * 
+ *     def strobe_offset(self):                               #Get IR Illumination Delay ##virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.StrobeOffset()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_55strobe_offset(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_55strobe_offset(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("strobe_offset (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_54strobe_offset(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_54strobe_offset(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("strobe_offset", 0);
+
+  /* "native.pyx":131
+ * 
+ *     def strobe_offset(self):                               #Get IR Illumination Delay ##virtual
+ *         self.thisptr.StrobeOffset()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_v_self->thisptr->StrobeOffset();
+
+  /* "native.pyx":130
+ *         self.thisptr.SetStrobeOffset(value)
+ * 
+ *     def strobe_offset(self):                               #Get IR Illumination Delay ##virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.StrobeOffset()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":134
+ * 
+ * 
+ *     def set_agc(self, enable):                             #Enable/Disable Imager AGC ##The AutomaticGainControl increases the intensifier gain if the video scene is too dim and decreases the gain if the video scene is too bright             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetAGC(enable)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_57set_agc(PyObject *__pyx_v_self, PyObject *__pyx_v_enable); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_57set_agc(PyObject *__pyx_v_self, PyObject *__pyx_v_enable) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("set_agc (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_56set_agc(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_enable));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_56set_agc(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enable) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  bool __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("set_agc", 0);
+
+  /* "native.pyx":135
+ * 
+ *     def set_agc(self, enable):                             #Enable/Disable Imager AGC ##The AutomaticGainControl increases the intensifier gain if the video scene is too dim and decreases the gain if the video scene is too bright
+ *         self.thisptr.SetAGC(enable)             # <<<<<<<<<<<<<<
+ * 
+ *     def agc(self):                                         ##probably returns if AGC is on or off (see above)
+ */
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 135; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetAGC(__pyx_t_1);
+
+  /* "native.pyx":134
+ * 
+ * 
+ *     def set_agc(self, enable):                             #Enable/Disable Imager AGC ##The AutomaticGainControl increases the intensifier gain if the video scene is too dim and decreases the gain if the video scene is too bright             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetAGC(enable)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("native.PyCam.set_agc", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":137
+ *         self.thisptr.SetAGC(enable)
+ * 
+ *     def agc(self):                                         ##probably returns if AGC is on or off (see above)             # <<<<<<<<<<<<<<
+ *         self.thisptr.AGC()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_59agc(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_59agc(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("agc (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_58agc(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_58agc(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("agc", 0);
+
+  /* "native.pyx":138
+ * 
+ *     def agc(self):                                         ##probably returns if AGC is on or off (see above)
+ *         self.thisptr.AGC()             # <<<<<<<<<<<<<<
+ * 
+ *     def is_agc_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent
+ */
+  __pyx_v_self->thisptr->AGC();
+
+  /* "native.pyx":137
+ *         self.thisptr.SetAGC(enable)
+ * 
+ *     def agc(self):                                         ##probably returns if AGC is on or off (see above)             # <<<<<<<<<<<<<<
+ *         self.thisptr.AGC()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":140
+ *         self.thisptr.AGC()
+ * 
+ *     def is_agc_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
+ *         self.thisptr.IsAGCAvailable()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_61is_agc_available(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_61is_agc_available(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("is_agc_available (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_60is_agc_available(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_60is_agc_available(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("is_agc_available", 0);
+
+  /* "native.pyx":141
+ * 
+ *     def is_agc_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent
+ *         self.thisptr.IsAGCAvailable()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_v_self->thisptr->IsAGCAvailable();
+
+  /* "native.pyx":140
+ *         self.thisptr.AGC()
+ * 
+ *     def is_agc_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
+ *         self.thisptr.IsAGCAvailable()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":144
+ * 
+ * 
+ *     def set_aec(self, enable):                                     #Enable/Disable Imager AEC ##automatic exposure control             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetAEC(enable)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_63set_aec(PyObject *__pyx_v_self, PyObject *__pyx_v_enable); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_63set_aec(PyObject *__pyx_v_self, PyObject *__pyx_v_enable) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("set_aec (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_62set_aec(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_enable));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_62set_aec(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enable) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  bool __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("set_aec", 0);
+
+  /* "native.pyx":145
+ * 
+ *     def set_aec(self, enable):                                     #Enable/Disable Imager AEC ##automatic exposure control
+ *         self.thisptr.SetAEC(enable)             # <<<<<<<<<<<<<<
+ * 
+ *     def aec(self):                                         ##returns if AEC is on or off (see above)
+ */
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 145; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetAEC(__pyx_t_1);
+
+  /* "native.pyx":144
+ * 
+ * 
+ *     def set_aec(self, enable):                                     #Enable/Disable Imager AEC ##automatic exposure control             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetAEC(enable)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("native.PyCam.set_aec", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":147
+ *         self.thisptr.SetAEC(enable)
+ * 
+ *     def aec(self):                                         ##returns if AEC is on or off (see above)             # <<<<<<<<<<<<<<
+ *         self.thisptr.AEC()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_65aec(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_65aec(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("aec (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_64aec(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_64aec(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("aec", 0);
+
+  /* "native.pyx":148
+ * 
+ *     def aec(self):                                         ##returns if AEC is on or off (see above)
+ *         self.thisptr.AEC()             # <<<<<<<<<<<<<<
+ * 
+ *     def is_aec_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent
+ */
+  __pyx_v_self->thisptr->AEC();
+
+  /* "native.pyx":147
+ *         self.thisptr.SetAEC(enable)
+ * 
+ *     def aec(self):                                         ##returns if AEC is on or off (see above)             # <<<<<<<<<<<<<<
+ *         self.thisptr.AEC()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":150
+ *         self.thisptr.AEC()
+ * 
+ *     def is_aec_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
+ *         self.thisptr.IsAECAvailable()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_67is_aec_available(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_67is_aec_available(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("is_aec_available (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_66is_aec_available(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_66is_aec_available(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("is_aec_available", 0);
+
+  /* "native.pyx":151
+ * 
+ *     def is_aec_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent
+ *         self.thisptr.IsAECAvailable()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_v_self->thisptr->IsAECAvailable();
+
+  /* "native.pyx":150
+ *         self.thisptr.AEC()
+ * 
+ *     def is_aec_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
+ *         self.thisptr.IsAECAvailable()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":154
+ * 
+ * 
+ *     def set_threshold(self, value):                        #Set Camera Threshold ##the intensity after which a pixel shows a signal ?             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetThreshold(value)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_69set_threshold(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_69set_threshold(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("set_threshold (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_68set_threshold(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_68set_threshold(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("set_threshold", 0);
+
+  /* "native.pyx":155
+ * 
+ *     def set_threshold(self, value):                        #Set Camera Threshold ##the intensity after which a pixel shows a signal ?
+ *         self.thisptr.SetThreshold(value)             # <<<<<<<<<<<<<<
+ * 
+ *     def threshold(self):                                   #Get Camera Threshold
+ */
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetThreshold(__pyx_t_1);
+
+  /* "native.pyx":154
+ * 
+ * 
+ *     def set_threshold(self, value):                        #Set Camera Threshold ##the intensity after which a pixel shows a signal ?             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetThreshold(value)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("native.PyCam.set_threshold", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":157
+ *         self.thisptr.SetThreshold(value)
+ * 
+ *     def threshold(self):                                   #Get Camera Threshold             # <<<<<<<<<<<<<<
+ *         self.thisptr.Threshold()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_71threshold(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_71threshold(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("threshold (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_70threshold(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_70threshold(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("threshold", 0);
+
+  /* "native.pyx":158
+ * 
+ *     def threshold(self):                                   #Get Camera Threshold
+ *         self.thisptr.Threshold()             # <<<<<<<<<<<<<<
+ * 
+ *     def minimum_threshold(self):                           #Returns the minimum threshold ##virtual
+ */
+  __pyx_v_self->thisptr->Threshold();
+
+  /* "native.pyx":157
+ *         self.thisptr.SetThreshold(value)
+ * 
+ *     def threshold(self):                                   #Get Camera Threshold             # <<<<<<<<<<<<<<
+ *         self.thisptr.Threshold()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":160
+ *         self.thisptr.Threshold()
+ * 
+ *     def minimum_threshold(self):                           #Returns the minimum threshold ##virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.MinimumThreshold()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_73minimum_threshold(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_73minimum_threshold(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("minimum_threshold (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_72minimum_threshold(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_72minimum_threshold(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("minimum_threshold", 0);
+
+  /* "native.pyx":161
+ * 
+ *     def minimum_threshold(self):                           #Returns the minimum threshold ##virtual
+ *         self.thisptr.MinimumThreshold()             # <<<<<<<<<<<<<<
+ * 
+ *     def maximum_threshold(self):                           #Returns the maximum threshold ##virtual
+ */
+  __pyx_v_self->thisptr->MinimumThreshold();
+
+  /* "native.pyx":160
+ *         self.thisptr.Threshold()
+ * 
+ *     def minimum_threshold(self):                           #Returns the minimum threshold ##virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.MinimumThreshold()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":163
+ *         self.thisptr.MinimumThreshold()
+ * 
+ *     def maximum_threshold(self):                           #Returns the maximum threshold ##virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.MaximumThreshold()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_75maximum_threshold(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_75maximum_threshold(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("maximum_threshold (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_74maximum_threshold(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_74maximum_threshold(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("maximum_threshold", 0);
+
+  /* "native.pyx":164
+ * 
+ *     def maximum_threshold(self):                           #Returns the maximum threshold ##virtual
+ *         self.thisptr.MaximumThreshold()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_v_self->thisptr->MaximumThreshold();
+
+  /* "native.pyx":163
+ *         self.thisptr.MinimumThreshold()
+ * 
+ *     def maximum_threshold(self):                           #Returns the maximum threshold ##virtual             # <<<<<<<<<<<<<<
+ *         self.thisptr.MaximumThreshold()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":167
+ * 
+ * 
+ *     def set_precision_cap(self,value):                     #Set Precision Packet Size Cap ##?             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetPrecisionCap(value)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_77set_precision_cap(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_77set_precision_cap(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("set_precision_cap (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_76set_precision_cap(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_76set_precision_cap(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("set_precision_cap", 0);
+
+  /* "native.pyx":168
+ * 
+ *     def set_precision_cap(self,value):                     #Set Precision Packet Size Cap ##?
+ *         self.thisptr.SetPrecisionCap(value)             # <<<<<<<<<<<<<<
+ * 
+ *     def precision_cap(self):                               #Get Precision Cap
+ */
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 168; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetPrecisionCap(__pyx_t_1);
+
+  /* "native.pyx":167
+ * 
+ * 
+ *     def set_precision_cap(self,value):                     #Set Precision Packet Size Cap ##?             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetPrecisionCap(value)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("native.PyCam.set_precision_cap", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":170
+ *         self.thisptr.SetPrecisionCap(value)
+ * 
+ *     def precision_cap(self):                               #Get Precision Cap             # <<<<<<<<<<<<<<
+ *         self.thisptr.PrecisionCap()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_79precision_cap(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_79precision_cap(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("precision_cap (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_78precision_cap(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_78precision_cap(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("precision_cap", 0);
+
+  /* "native.pyx":171
+ * 
+ *     def precision_cap(self):                               #Get Precision Cap
+ *         self.thisptr.PrecisionCap()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_v_self->thisptr->PrecisionCap();
+
+  /* "native.pyx":170
+ *         self.thisptr.SetPrecisionCap(value)
+ * 
+ *     def precision_cap(self):                               #Get Precision Cap             # <<<<<<<<<<<<<<
+ *         self.thisptr.PrecisionCap()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":174
+ * 
+ * 
+ *     def set_imager_gain(self, imager_gain):                #Image gain ##gain in a digital imaging device represents the relationship between the number of electrons acquired on an image sensor and the analog-to-digital units (ADUs) that are generated, representing the image signal. Increasing the gain amplifies the signal by increasing the ratio of ADUs to electrons acquired on the sensor. The result is that increasing gain increases the apparent brightness of an image at a given exposure             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetImagerGain(imager_gain)
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_81set_imager_gain(PyObject *__pyx_v_self, PyObject *__pyx_v_imager_gain); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_81set_imager_gain(PyObject *__pyx_v_self, PyObject *__pyx_v_imager_gain) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("set_imager_gain (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_80set_imager_gain(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), ((PyObject *)__pyx_v_imager_gain));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_80set_imager_gain(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_imager_gain) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  enum CameraLibrary::eImagerGain __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("set_imager_gain", 0);
+
+  /* "native.pyx":175
+ * 
+ *     def set_imager_gain(self, imager_gain):                #Image gain ##gain in a digital imaging device represents the relationship between the number of electrons acquired on an image sensor and the analog-to-digital units (ADUs) that are generated, representing the image signal. Increasing the gain amplifies the signal by increasing the ratio of ADUs to electrons acquired on the sensor. The result is that increasing gain increases the apparent brightness of an image at a given exposure
+ *         self.thisptr.SetImagerGain(imager_gain)             # <<<<<<<<<<<<<<
+ * 
+ *     def imager_gain(self):                                 ##gives back actual imager gain value (see above)
+ */
+  __pyx_t_1 = ((enum CameraLibrary::eImagerGain)PyInt_AsLong(__pyx_v_imager_gain)); if (unlikely(PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_v_self->thisptr->SetImagerGain(__pyx_t_1);
+
+  /* "native.pyx":174
+ * 
+ * 
+ *     def set_imager_gain(self, imager_gain):                #Image gain ##gain in a digital imaging device represents the relationship between the number of electrons acquired on an image sensor and the analog-to-digital units (ADUs) that are generated, representing the image signal. Increasing the gain amplifies the signal by increasing the ratio of ADUs to electrons acquired on the sensor. The result is that increasing gain increases the apparent brightness of an image at a given exposure             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetImagerGain(imager_gain)
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("native.PyCam.set_imager_gain", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":177
+ *         self.thisptr.SetImagerGain(imager_gain)
+ * 
+ *     def imager_gain(self):                                 ##gives back actual imager gain value (see above)             # <<<<<<<<<<<<<<
+ *         self.thisptr.ImagerGain()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_83imager_gain(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_83imager_gain(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("imager_gain (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_82imager_gain(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_82imager_gain(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("imager_gain", 0);
+
+  /* "native.pyx":178
+ * 
+ *     def imager_gain(self):                                 ##gives back actual imager gain value (see above)
+ *         self.thisptr.ImagerGain()             # <<<<<<<<<<<<<<
+ * 
+ *     def imager_gain_levels(self):                          ##(virtual) probably gives back number of possible levels starting to count at 0
+ */
+  __pyx_v_self->thisptr->ImagerGain();
+
+  /* "native.pyx":177
+ *         self.thisptr.SetImagerGain(imager_gain)
+ * 
+ *     def imager_gain(self):                                 ##gives back actual imager gain value (see above)             # <<<<<<<<<<<<<<
+ *         self.thisptr.ImagerGain()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":180
+ *         self.thisptr.ImagerGain()
+ * 
+ *     def imager_gain_levels(self):                          ##(virtual) probably gives back number of possible levels starting to count at 0             # <<<<<<<<<<<<<<
+ *         self.thisptr.ImagerGainLevels()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_85imager_gain_levels(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_85imager_gain_levels(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("imager_gain_levels (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_84imager_gain_levels(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_84imager_gain_levels(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("imager_gain_levels", 0);
+
+  /* "native.pyx":181
+ * 
+ *     def imager_gain_levels(self):                          ##(virtual) probably gives back number of possible levels starting to count at 0
+ *         self.thisptr.ImagerGainLevels()             # <<<<<<<<<<<<<<
+ * 
+ *     def is_imager_gain_available(self):                    ##returns false as implemented in camera.h but is virtual and probably camera dependent
+ */
+  __pyx_v_self->thisptr->ImagerGainLevels();
+
+  /* "native.pyx":180
+ *         self.thisptr.ImagerGain()
+ * 
+ *     def imager_gain_levels(self):                          ##(virtual) probably gives back number of possible levels starting to count at 0             # <<<<<<<<<<<<<<
+ *         self.thisptr.ImagerGainLevels()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":183
+ *         self.thisptr.ImagerGainLevels()
+ * 
+ *     def is_imager_gain_available(self):                    ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
+ *         self.thisptr.IsImagerGainAvailable()
+ * 
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_87is_imager_gain_available(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_87is_imager_gain_available(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("is_imager_gain_available (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_86is_imager_gain_available(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_86is_imager_gain_available(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("is_imager_gain_available", 0);
+
+  /* "native.pyx":184
+ * 
+ *     def is_imager_gain_available(self):                    ##returns false as implemented in camera.h but is virtual and probably camera dependent
+ *         self.thisptr.IsImagerGainAvailable()             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_v_self->thisptr->IsImagerGainAvailable();
+
+  /* "native.pyx":183
+ *         self.thisptr.ImagerGainLevels()
+ * 
+ *     def is_imager_gain_available(self):                    ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
+ *         self.thisptr.IsImagerGainAvailable()
+ * 
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "native.pyx":187
+ * 
+ * 
+ *     def releasecam(self):                                  #Call this when you're done with a camera             # <<<<<<<<<<<<<<
+ *         self.thisptr.Release()
+ *         print "camera released"
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6native_5PyCam_89releasecam(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_6native_5PyCam_89releasecam(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("releasecam (wrapper)", 0);
+  __pyx_r = __pyx_pf_6native_5PyCam_88releasecam(((struct __pyx_obj_6native_PyCam *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6native_5PyCam_88releasecam(struct __pyx_obj_6native_PyCam *__pyx_v_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   int __pyx_lineno = 0;
@@ -1516,28 +3656,28 @@ static PyObject *__pyx_pf_6native_5PyCam_16releasecam(struct __pyx_obj_6native_P
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("releasecam", 0);
 
-  /* "native.pyx":63
+  /* "native.pyx":188
  * 
- *     def releasecam(self):                   #Call this when you're done with a camera
+ *     def releasecam(self):                                  #Call this when you're done with a camera
  *         self.thisptr.Release()             # <<<<<<<<<<<<<<
  *         print "camera released"
  * 
  */
   __pyx_v_self->thisptr->Release();
 
-  /* "native.pyx":64
- *     def releasecam(self):                   #Call this when you're done with a camera
+  /* "native.pyx":189
+ *     def releasecam(self):                                  #Call this when you're done with a camera
  *         self.thisptr.Release()
  *         print "camera released"             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  if (__Pyx_PrintOne(0, __pyx_kp_s_camera_released) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 64; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (__Pyx_PrintOne(0, __pyx_kp_s_camera_released) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 189; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "native.pyx":62
+  /* "native.pyx":187
  * 
  * 
- *     def releasecam(self):                   #Call this when you're done with a camera             # <<<<<<<<<<<<<<
+ *     def releasecam(self):                                  #Call this when you're done with a camera             # <<<<<<<<<<<<<<
  *         self.thisptr.Release()
  *         print "camera released"
  */
@@ -1579,8 +3719,10 @@ static void __pyx_tp_dealloc_6native_PyCamM(PyObject *o) {
 
 static PyMethodDef __pyx_methods_6native_PyCamM[] = {
   {"wait_for_initialization", (PyCFunction)__pyx_pw_6native_6PyCamM_3wait_for_initialization, METH_NOARGS, 0},
-  {"shutdown", (PyCFunction)__pyx_pw_6native_6PyCamM_5shutdown, METH_NOARGS, 0},
+  {"are_cameras_initialized", (PyCFunction)__pyx_pw_6native_6PyCamM_5are_cameras_initialized, METH_NOARGS, 0},
   {"get_camera", (PyCFunction)__pyx_pw_6native_6PyCamM_7get_camera, METH_NOARGS, 0},
+  {"shutdown", (PyCFunction)__pyx_pw_6native_6PyCamM_9shutdown, METH_NOARGS, 0},
+  {"are_cameras_shutdown", (PyCFunction)__pyx_pw_6native_6PyCamM_11are_cameras_shutdown, METH_NOARGS, 0},
   {0, 0, 0, 0}
 };
 
@@ -1669,10 +3811,46 @@ static PyMethodDef __pyx_methods_6native_PyCam[] = {
   {"set_led", (PyCFunction)__pyx_pw_6native_5PyCam_5set_led, METH_VARARGS|METH_KEYWORDS, 0},
   {"set_all_led", (PyCFunction)__pyx_pw_6native_5PyCam_7set_all_led, METH_O, 0},
   {"set_status_intensity", (PyCFunction)__pyx_pw_6native_5PyCam_9set_status_intensity, METH_O, 0},
-  {"ringlight_enabled_while_stopped", (PyCFunction)__pyx_pw_6native_5PyCam_11ringlight_enabled_while_stopped, METH_NOARGS, 0},
-  {"set_ringlight_enabled_while_stopped", (PyCFunction)__pyx_pw_6native_5PyCam_13set_ringlight_enabled_while_stopped, METH_O, 0},
-  {"set_intensity", (PyCFunction)__pyx_pw_6native_5PyCam_15set_intensity, METH_O, 0},
-  {"releasecam", (PyCFunction)__pyx_pw_6native_5PyCam_17releasecam, METH_NOARGS, 0},
+  {"status_ring_light_count", (PyCFunction)__pyx_pw_6native_5PyCam_11status_ring_light_count, METH_NOARGS, 0},
+  {"ringlight_enabled_while_stopped", (PyCFunction)__pyx_pw_6native_5PyCam_13ringlight_enabled_while_stopped, METH_NOARGS, 0},
+  {"set_ringlight_enabled_while_stopped", (PyCFunction)__pyx_pw_6native_5PyCam_15set_ringlight_enabled_while_stopped, METH_O, 0},
+  {"set_intensity", (PyCFunction)__pyx_pw_6native_5PyCam_17set_intensity, METH_O, 0},
+  {"intensity", (PyCFunction)__pyx_pw_6native_5PyCam_19intensity, METH_NOARGS, 0},
+  {"minimum_intensity", (PyCFunction)__pyx_pw_6native_5PyCam_21minimum_intensity, METH_NOARGS, 0},
+  {"maximum_intensity", (PyCFunction)__pyx_pw_6native_5PyCam_23maximum_intensity, METH_NOARGS, 0},
+  {"set_exposure", (PyCFunction)__pyx_pw_6native_5PyCam_25set_exposure, METH_O, 0},
+  {"exposure", (PyCFunction)__pyx_pw_6native_5PyCam_27exposure, METH_NOARGS, 0},
+  {"minimum_exposure_value", (PyCFunction)__pyx_pw_6native_5PyCam_29minimum_exposure_value, METH_NOARGS, 0},
+  {"maximum_exposure_value", (PyCFunction)__pyx_pw_6native_5PyCam_31maximum_exposure_value, METH_NOARGS, 0},
+  {"set_frame_rate", (PyCFunction)__pyx_pw_6native_5PyCam_33set_frame_rate, METH_O, 0},
+  {"frame_rate", (PyCFunction)__pyx_pw_6native_5PyCam_35frame_rate, METH_NOARGS, 0},
+  {"set_frame_decimation", (PyCFunction)__pyx_pw_6native_5PyCam_37set_frame_decimation, METH_O, 0},
+  {"frame_decimation", (PyCFunction)__pyx_pw_6native_5PyCam_39frame_decimation, METH_NOARGS, 0},
+  {"actual_frame_rate", (PyCFunction)__pyx_pw_6native_5PyCam_41actual_frame_rate, METH_NOARGS, 0},
+  {"minimum_frame_rate_value", (PyCFunction)__pyx_pw_6native_5PyCam_43minimum_frame_rate_value, METH_NOARGS, 0},
+  {"maximum_frame_rate_value", (PyCFunction)__pyx_pw_6native_5PyCam_45maximum_frame_rate_value, METH_NOARGS, 0},
+  {"set_ir_filter", (PyCFunction)__pyx_pw_6native_5PyCam_47set_ir_filter, METH_O, 0},
+  {"ir_filter", (PyCFunction)__pyx_pw_6native_5PyCam_49ir_filter, METH_NOARGS, 0},
+  {"is_filter_switch_available", (PyCFunction)__pyx_pw_6native_5PyCam_51is_filter_switch_available, METH_NOARGS, 0},
+  {"set_strobe_offset", (PyCFunction)__pyx_pw_6native_5PyCam_53set_strobe_offset, METH_O, 0},
+  {"strobe_offset", (PyCFunction)__pyx_pw_6native_5PyCam_55strobe_offset, METH_NOARGS, 0},
+  {"set_agc", (PyCFunction)__pyx_pw_6native_5PyCam_57set_agc, METH_O, 0},
+  {"agc", (PyCFunction)__pyx_pw_6native_5PyCam_59agc, METH_NOARGS, 0},
+  {"is_agc_available", (PyCFunction)__pyx_pw_6native_5PyCam_61is_agc_available, METH_NOARGS, 0},
+  {"set_aec", (PyCFunction)__pyx_pw_6native_5PyCam_63set_aec, METH_O, 0},
+  {"aec", (PyCFunction)__pyx_pw_6native_5PyCam_65aec, METH_NOARGS, 0},
+  {"is_aec_available", (PyCFunction)__pyx_pw_6native_5PyCam_67is_aec_available, METH_NOARGS, 0},
+  {"set_threshold", (PyCFunction)__pyx_pw_6native_5PyCam_69set_threshold, METH_O, 0},
+  {"threshold", (PyCFunction)__pyx_pw_6native_5PyCam_71threshold, METH_NOARGS, 0},
+  {"minimum_threshold", (PyCFunction)__pyx_pw_6native_5PyCam_73minimum_threshold, METH_NOARGS, 0},
+  {"maximum_threshold", (PyCFunction)__pyx_pw_6native_5PyCam_75maximum_threshold, METH_NOARGS, 0},
+  {"set_precision_cap", (PyCFunction)__pyx_pw_6native_5PyCam_77set_precision_cap, METH_O, 0},
+  {"precision_cap", (PyCFunction)__pyx_pw_6native_5PyCam_79precision_cap, METH_NOARGS, 0},
+  {"set_imager_gain", (PyCFunction)__pyx_pw_6native_5PyCam_81set_imager_gain, METH_O, 0},
+  {"imager_gain", (PyCFunction)__pyx_pw_6native_5PyCam_83imager_gain, METH_NOARGS, 0},
+  {"imager_gain_levels", (PyCFunction)__pyx_pw_6native_5PyCam_85imager_gain_levels, METH_NOARGS, 0},
+  {"is_imager_gain_available", (PyCFunction)__pyx_pw_6native_5PyCam_87is_imager_gain_available, METH_NOARGS, 0},
+  {"releasecam", (PyCFunction)__pyx_pw_6native_5PyCam_89releasecam, METH_NOARGS, 0},
   {0, 0, 0, 0}
 };
 
@@ -1756,7 +3934,9 @@ static struct PyModuleDef __pyx_moduledef = {
 #endif
 
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
+  {&__pyx_kp_s_Intensity_Values_for_IR_LEDs_mus, __pyx_k_Intensity_Values_for_IR_LEDs_mus, sizeof(__pyx_k_Intensity_Values_for_IR_LEDs_mus), 0, 0, 1, 0},
   {&__pyx_n_s_Vash, __pyx_k_Vash, sizeof(__pyx_k_Vash), 0, 0, 1, 1},
+  {&__pyx_n_s_are_cameras_initialized, __pyx_k_are_cameras_initialized, sizeof(__pyx_k_are_cameras_initialized), 0, 0, 1, 1},
   {&__pyx_n_s_author, __pyx_k_author, sizeof(__pyx_k_author), 0, 0, 1, 1},
   {&__pyx_kp_s_camera_released, __pyx_k_camera_released, sizeof(__pyx_k_camera_released), 0, 0, 1, 0},
   {&__pyx_n_s_enable, __pyx_k_enable, sizeof(__pyx_k_enable), 0, 0, 1, 1},
@@ -1782,6 +3962,7 @@ static int __Pyx_InitCachedConstants(void) {
 
 static int __Pyx_InitGlobals(void) {
   if (__Pyx_InitStrings(__pyx_string_tab) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  __pyx_int_16 = PyInt_FromLong(16); if (unlikely(!__pyx_int_16)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -1867,13 +4048,13 @@ PyMODINIT_FUNC PyInit_native(void)
   /*--- Variable export code ---*/
   /*--- Function export code ---*/
   /*--- Type init code ---*/
-  if (PyType_Ready(&__pyx_type_6native_PyCamM) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyType_Ready(&__pyx_type_6native_PyCamM) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 8; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_type_6native_PyCamM.tp_print = 0;
-  if (PyObject_SetAttrString(__pyx_m, "PyCamM", (PyObject *)&__pyx_type_6native_PyCamM) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyObject_SetAttrString(__pyx_m, "PyCamM", (PyObject *)&__pyx_type_6native_PyCamM) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 8; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_ptype_6native_PyCamM = &__pyx_type_6native_PyCamM;
-  if (PyType_Ready(&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 31; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyType_Ready(&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 38; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_type_6native_PyCam.tp_print = 0;
-  if (PyObject_SetAttrString(__pyx_m, "PyCam", (PyObject *)&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 31; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyObject_SetAttrString(__pyx_m, "PyCam", (PyObject *)&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 38; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_ptype_6native_PyCam = &__pyx_type_6native_PyCam;
   /*--- Type import code ---*/
   /*--- Variable import code ---*/
@@ -1883,15 +4064,15 @@ PyMODINIT_FUNC PyInit_native(void)
   /* "native.pyx":1
  * __author__ = 'Vash'             # <<<<<<<<<<<<<<
  * 
- * 
+ * # means comment from official SDK API (or Cython page) ## means comment from me
  */
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_author, __pyx_n_s_Vash) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_author, __pyx_n_s_Vash) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "native.pyx":62
+  /* "native.pyx":187
  * 
  * 
- *     def releasecam(self):                   #Call this when you're done with a camera             # <<<<<<<<<<<<<<
+ *     def releasecam(self):                                  #Call this when you're done with a camera             # <<<<<<<<<<<<<<
  *         self.thisptr.Release()
  *         print "camera released"
  */
@@ -1903,63 +4084,103 @@ PyMODINIT_FUNC PyInit_native(void)
   /*--- Wrapped vars code ---*/
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::GreenStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 12; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "GreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 12; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 13; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "GreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 13; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level0);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 38; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level0", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 38; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level3);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 41; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level3", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 41; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level2);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 40; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level2", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 40; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level5);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level5", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level4);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level4", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level7);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 45; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level7", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 45; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level6);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 44; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level6", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 44; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::AimAssistLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "AimAssistLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 32; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
-  }
-  {
-    PyObject* wrapped = PyInt_FromLong(CameraLibrary::LeftRedStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 19; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "LeftRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 19; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
-  }
-  {
-    PyObject* wrapped = PyInt_FromLong(CameraLibrary::CaseStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "CaseStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
-  }
-  {
-    PyObject* wrapped = PyInt_FromLong(CameraLibrary::SNAV4BottomStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "SNAV4BottomStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
-  }
-  {
-    PyObject* wrapped = PyInt_FromLong(CameraLibrary::RightRedStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "RightRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
-  }
-  {
-    PyObject* wrapped = PyInt_FromLong(CameraLibrary::IlluminationLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "IlluminationLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 33; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "AimAssistLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 33; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::SNAV4FrontGreenStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "SNAV4FrontGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "SNAV4FrontGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::LeftRedStatusLED);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "LeftRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::CaseStatusLED);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "CaseStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::SNAV4BottomStatusLED);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 29; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "SNAV4BottomStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 29; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::RightRedStatusLED);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "RightRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::IlluminationLED);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 16; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "IlluminationLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 16; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+  }
+  {
+    PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level1);
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level1", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::SNAV4FrontRedStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 26; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "SNAV4FrontRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 26; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "SNAV4FrontRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::LeftGreenStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "LeftGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "LeftGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::RightGreenStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "RightGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 23; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "RightGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 23; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::RedStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 13; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "RedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 13; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "RedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
 
   goto __pyx_L0;
@@ -2079,6 +4300,70 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg
             "NULL result without error in PyObject_Call");
     }
     return result;
+}
+#endif
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg) {
+    PyObject *self, *result;
+    PyCFunction cfunc;
+    cfunc = PyCFunction_GET_FUNCTION(func);
+    self = PyCFunction_GET_SELF(func);
+    if (unlikely(Py_EnterRecursiveCall((char*)" while calling a Python object")))
+        return NULL;
+    result = cfunc(self, arg);
+    Py_LeaveRecursiveCall();
+    if (unlikely(!result) && unlikely(!PyErr_Occurred())) {
+        PyErr_SetString(
+            PyExc_SystemError,
+            "NULL result without error in PyObject_Call");
+    }
+    return result;
+}
+#endif
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static PyObject* __Pyx__PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+    PyObject *result;
+    PyObject *args = PyTuple_New(1);
+    if (unlikely(!args)) return NULL;
+    Py_INCREF(arg);
+    PyTuple_SET_ITEM(args, 0, arg);
+    result = __Pyx_PyObject_Call(func, args, NULL);
+    Py_DECREF(args);
+    return result;
+}
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+#ifdef __Pyx_CyFunction_USED
+    if (likely(PyCFunction_Check(func) || PyObject_TypeCheck(func, __pyx_CyFunctionType))) {
+#else
+    if (likely(PyCFunction_Check(func))) {
+#endif
+        if (likely(PyCFunction_GET_FLAGS(func) & METH_O)) {
+            return __Pyx_PyObject_CallMethO(func, arg);
+        }
+    }
+    return __Pyx__PyObject_CallOneArg(func, arg);
+}
+#else
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg) {
+    PyObject* args = PyTuple_Pack(1, arg);
+    return (likely(args)) ? __Pyx_PyObject_Call(func, args, NULL) : NULL;
+}
+#endif
+
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func) {
+#ifdef __Pyx_CyFunction_USED
+    if (likely(PyCFunction_Check(func) || PyObject_TypeCheck(func, __pyx_CyFunctionType))) {
+#else
+    if (likely(PyCFunction_Check(func))) {
+#endif
+        if (likely(PyCFunction_GET_FLAGS(func) & METH_NOARGS)) {
+            return __Pyx_PyObject_CallMethO(func, NULL);
+        }
+    }
+    return __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL);
 }
 #endif
 
