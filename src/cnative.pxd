@@ -50,26 +50,17 @@ cdef extern from "camera.h" namespace "CameraLibrary":
     cdef cppclass Camera:
 
         void        SetNumeric(bool enable , int value)                             #Turn on/off numeric camera LEDs and change the value they show
-
         void        SetLED(eStatusLEDs led, bool enable)                            #Turn Camera LEDs On/Off. ##Could for example turn off the AimAssistLED blinking at the back of the camera when it is initialized.
-
         void        SetAllLED(eStatusLEDs led)                                      #Turn all camera LEDs On/Off.
-
         void        SetStatusIntensity(int intensity)                               #All Status LED to (0-->255). ##So far not sure what that means
-
         int         StatusRingLightCount()                                          #Number of status ring LEDs ##function is also virtual and also(maybe redefined?) in camerarev26.h and 31 and 33)
 
-
+        # Ringlight (IR Light) Methods
         bool        RinglightEnabledWhileStopped()                                  ## Should return if the function below is enabled or disabled.
-
         void        SetRinglightEnabledWhileStopped(bool enable)                    ## If remember correctly, when the cameras are initialized but do not record (i.e. are stopped) one can change intensity of ringlight. Like the IR LEDs below.
-
         void        SetIntensity(int value)                                         #set camera intensity ##(function is also virtual) Actually changes the value of the intensity for the ring LEDs (so far only IR?)
-
         int         Intensity()                                                     #get camera intensity ##function is also virtual and also(maybe redefined?)in CameraRev16Child.h)
-
         int         MinimumIntensity()                                              #Returns the minimum intensity
-
         int         MaximumIntensity()                                              #Returns the maximum intensity
 
 
