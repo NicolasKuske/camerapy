@@ -45,6 +45,12 @@ cdef extern from "cameratypes.h" namespace "CameraLibrary":
         Gain_Level7                  = 7
 
 
+    cdef cppclass sStatusLightColor:
+        unsigned char Red
+        unsigned char Blue
+        unsigned char Green
+
+        #sStatusLightColor light_color
 
 cdef extern from "camera.h" namespace "CameraLibrary":
     cdef cppclass Camera:
@@ -54,6 +60,8 @@ cdef extern from "camera.h" namespace "CameraLibrary":
         void        SetAllLED(eStatusLEDs led)                                      #Turn all camera LEDs On/Off.
         void        SetStatusIntensity(int intensity)                               #All Status LED to (0-->255). ##So far not sure what that means
         int         StatusRingLightCount()                                          #Number of status ring LEDs ##function is also virtual and also(maybe redefined?) in camerarev26.h and 31 and 33)
+        void        SetStatusRingLights(int count, sStatusLightColor * light_colors)
+
 
         # Ringlight (IR Light) Methods
         bool        RinglightEnabledWhileStopped()                                  ## Should return if the function below is enabled or disabled.

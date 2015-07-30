@@ -28,11 +28,35 @@ cdef class PyCamM:
 
     def are_cameras_shutdown(self):        #Check and see if all cameras are shutdown
         return self.thisptr.AreCamerasShutdown()
+
+
    # def get_cam(self):
     #    return PyCam(Camera *self.thisptr.GetCamera())
 
 
 # http://stackoverflow.com/questions/10436837/cython-and-c-class-constructors?lq=1
+
+cdef class SColor:
+
+    cdef sStatusLightColor *thisptr
+
+    def __cinit__(self, unsigned char r, unsigned char g, unsigned char b):
+        self.thisptr = new sStatusLightColor()
+        self.thisptr.Red = r
+        self.thisptr.Green = g
+        self.thisptr.Blue = b
+
+    @property
+    def r(self):
+        return self.thisptr.Red
+
+    @property
+    def g(self):
+        return self.thisptr.Green
+
+    @property
+    def b(self):
+        return self.thisptr.Blue
 
 
 cdef class PyCam:
@@ -61,15 +85,19 @@ cdef class PyCam:
     def status_ring_light_count(self):                     #Number of status ring LEDs ##function is also (maybe redefined?) in camerarev26.h and 31 and 33.
         return self.thisptr.StatusRingLightCount()
 
+    def set_status_ring_lights(self, int count, SColor light_color):
+        self.thisptr.SetStatusRingLights(count, light_color.thisptr)
+
+
 
     def ringlight_enabled_while_stopped(self):             ##returns if the function below is enabled or disabled.
         return self.thisptr.RinglightEnabledWhileStopped()
 
-    def set_ringlight_enabled_while_stopped(self,enable):  ## When the camera is initialized but does not record (i.e. is stopped) one can change intensity of ringlight. Like the IR LEDs below.
+    def set_ringlight_enabled_while_stopped(self,enable):  ## When the camera is initialized but does not record (i.e. is stopped) one can change ring light color. This also switches on and off the IR LEDs.
         self.thisptr.SetRinglightEnabledWhileStopped(enable)
 
-    def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the ring LEDs (so far only IR?)
-        assert self.minimum_intensity() < value < self.maximum_intensity(), "Intensity Values for IR LEDs must be in range {}-{}".format(
+    def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the IR LEDs
+        assert self.minimum_intensity() <= value <= self.maximum_intensity(), "Intensity Values for IR LEDs must be in range {}-{}".format(
                                                                             self.minimum_intensity(), self.maximum_intensity())
         self.thisptr.SetIntensity(value)
 
