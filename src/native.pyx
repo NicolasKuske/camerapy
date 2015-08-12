@@ -3,6 +3,9 @@ __author__ = 'Vash'
 # means comment from official SDK API (or Cython page) ## means comment from me
 
 include "cnative.pxd"
+from cpython cimport array
+import array
+from libc.stdlib cimport malloc, free
 
 
 cdef class PyCamM:
@@ -85,10 +88,16 @@ cdef class PyCam:
     def status_ring_light_count(self):                     #Number of status ring LEDs ##function is also (maybe redefined?) in camerarev26.h and 31 and 33.
         return self.thisptr.StatusRingLightCount()
 
-    def set_status_ring_lights(self, int count, SColor light_color):
-        self.thisptr.SetStatusRingLights(count, light_color.thisptr)
-
-
+    def set_status_ring_lights(self, r, g, b):
+        count = self.thisptr.StatusRingLightCount()
+    #     size = count * sizeof(sStatusLightColor)
+    #     cdef sStatusLightColor *colors = <sStatusLightColor *>malloc(count * sizeof(sStatusLightColor))   ##dont forget to free memory afterwards free(colors)
+        cdef sStatusLightColor colors[16]
+        for i in range(16):
+            colors[i].Red = r
+            colors[i].Blue = b
+            colors[i].Green = g
+        self.thisptr.SetStatusRingLights(count, colors)
 
     def ringlight_enabled_while_stopped(self):             ##returns if the function below is enabled or disabled.
         return self.thisptr.RinglightEnabledWhileStopped()

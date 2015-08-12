@@ -277,6 +277,10 @@ class __Pyx_FakeReference {
 #include "cameratypes.h"
 #include "camera.h"
 #include "cameramanager.h"
+#include "string.h"
+#include "stdio.h"
+#include "pythread.h"
+#include "stdlib.h"
 #ifdef _OPENMP
 #include <omp.h>
 #endif /* _OPENMP */
@@ -467,15 +471,23 @@ static const char *__pyx_filename;
 
 static const char *__pyx_f[] = {
   "src\\native.pyx",
+  "array.pxd",
+  "type.pxd",
+  "bool.pxd",
+  "complex.pxd",
   "src\\cnative.pxd",
 };
 
 /*--- Type declarations ---*/
+#ifndef _ARRAYARRAY_H
+struct arrayobject;
+typedef struct arrayobject arrayobject;
+#endif
 struct __pyx_obj_6native_PyCamM;
 struct __pyx_obj_6native_SColor;
 struct __pyx_obj_6native_PyCam;
 
-/* "native.pyx":8
+/* "native.pyx":11
  * 
  * 
  * cdef class PyCamM:             # <<<<<<<<<<<<<<
@@ -488,7 +500,7 @@ struct __pyx_obj_6native_PyCamM {
 };
 
 
-/* "native.pyx":39
+/* "native.pyx":42
  * # http://stackoverflow.com/questions/10436837/cython-and-c-class-constructors?lq=1
  * 
  * cdef class SColor:             # <<<<<<<<<<<<<<
@@ -501,7 +513,7 @@ struct __pyx_obj_6native_SColor {
 };
 
 
-/* "native.pyx":62
+/* "native.pyx":65
  * 
  * 
  * cdef class PyCam:             # <<<<<<<<<<<<<<
@@ -623,9 +635,6 @@ static int __Pyx_ParseOptionalKeywords(PyObject *kwds, PyObject **argnames[], \
     PyObject *kwds2, PyObject *values[], Py_ssize_t num_pos_args, \
     const char* function_name);
 
-static CYTHON_INLINE int __Pyx_ArgTypeTest(PyObject *obj, PyTypeObject *type, int none_allowed,
-    const char *name, int exact);
-
 static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name);
 
 static PyObject *__Pyx_GetNameInClass(PyObject *nmspace, PyObject *name);
@@ -647,9 +656,119 @@ static void __pyx_insert_code_object(int code_line, PyCodeObject* code_object);
 static void __Pyx_AddTraceback(const char *funcname, int c_line,
                                int py_line, const char *filename);
 
-static CYTHON_INLINE unsigned char __Pyx_PyInt_As_unsigned_char(PyObject *);
+#ifndef _ARRAYARRAY_H
+#define _ARRAYARRAY_H
+typedef struct arraydescr {
+    int typecode;
+    int itemsize;
+    PyObject * (*getitem)(struct arrayobject *, Py_ssize_t);
+    int (*setitem)(struct arrayobject *, Py_ssize_t, PyObject *);
+#if PY_MAJOR_VERSION >= 3
+    char *formats;
+#endif
+} arraydescr;
+struct arrayobject {
+    PyObject_HEAD
+    Py_ssize_t ob_size;
+    union {
+        char *ob_item;
+        float *as_floats;
+        double *as_doubles;
+        int *as_ints;
+        unsigned int *as_uints;
+        unsigned char *as_uchars;
+        signed char *as_schars;
+        char *as_chars;
+        unsigned long *as_ulongs;
+        long *as_longs;
+        short *as_shorts;
+        unsigned short *as_ushorts;
+        Py_UNICODE *as_pyunicodes;
+        void *as_voidptr;
+    } data;
+    Py_ssize_t allocated;
+    struct arraydescr *ob_descr;
+    PyObject *weakreflist;
+#if PY_MAJOR_VERSION >= 3
+        int ob_exports;
+#endif
+};
+#ifndef NO_NEWARRAY_INLINE
+static CYTHON_INLINE PyObject * newarrayobject(PyTypeObject *type, Py_ssize_t size,
+    struct arraydescr *descr) {
+    arrayobject *op;
+    size_t nbytes;
+    if (size < 0) {
+        PyErr_BadInternalCall();
+        return NULL;
+    }
+    nbytes = size * descr->itemsize;
+    if (nbytes / descr->itemsize != (size_t)size) {
+        return PyErr_NoMemory();
+    }
+    op = (arrayobject *) type->tp_alloc(type, 0);
+    if (op == NULL) {
+        return NULL;
+    }
+    op->ob_descr = descr;
+    op->allocated = size;
+    op->weakreflist = NULL;
+    op->ob_size = size;
+    if (size <= 0) {
+        op->data.ob_item = NULL;
+    }
+    else {
+        op->data.ob_item = PyMem_NEW(char, nbytes);
+        if (op->data.ob_item == NULL) {
+            Py_DECREF(op);
+            return PyErr_NoMemory();
+        }
+    }
+    return (PyObject *) op;
+}
+#else
+PyObject* newarrayobject(PyTypeObject *type, Py_ssize_t size,
+    struct arraydescr *descr);
+#endif
+static CYTHON_INLINE int resize(arrayobject *self, Py_ssize_t n) {
+    void *items = (void*) self->data.ob_item;
+    PyMem_Resize(items, char, (size_t)(n * self->ob_descr->itemsize));
+    if (items == NULL) {
+        PyErr_NoMemory();
+        return -1;
+    }
+    self->data.ob_item = (char*) items;
+    self->ob_size = n;
+    self->allocated = n;
+    return 0;
+}
+static CYTHON_INLINE int resize_smart(arrayobject *self, Py_ssize_t n) {
+    void *items = (void*) self->data.ob_item;
+    Py_ssize_t newsize;
+    if (n < self->ob_size) {
+        self->ob_size = n;
+        return 0;
+    }
+    newsize = n + (n / 2) + 1;
+    if (newsize <= self->allocated) {
+        PyErr_NoMemory();
+        return -1;
+    }
+    PyMem_Resize(items, char, (size_t)(newsize * self->ob_descr->itemsize));
+    if (items == NULL) {
+        PyErr_NoMemory();
+        return -1;
+    }
+    self->data.ob_item = (char*) items;
+    self->ob_size = n;
+    self->allocated = newsize;
+    return 0;
+}
+#endif
 
-static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
+static PyObject *__Pyx_Import(PyObject *name, PyObject *from_list, int level);
+
+static CYTHON_INLINE unsigned char __Pyx_PyInt_As_unsigned_char(PyObject *);
 
 #ifndef __Pyx_CppExn2PyErr
 #include <new>
@@ -692,7 +811,11 @@ static void __Pyx_CppExn2PyErr() {
 
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_unsigned_char(unsigned char value);
 
+static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
+
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value);
+
+static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *);
 
 static int __Pyx_Print(PyObject*, PyObject *, int);
 #if CYTHON_COMPILING_IN_PYPY || PY_MAJOR_VERSION >= 3
@@ -704,14 +827,115 @@ static int __Pyx_PrintOne(PyObject* stream, PyObject *o);
 
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value);
 
-static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *);
-
 static int __Pyx_check_binary_version(void);
+
+#if !defined(__Pyx_PyIdentifier_FromString)
+#if PY_MAJOR_VERSION < 3
+  #define __Pyx_PyIdentifier_FromString(s) PyString_FromString(s)
+#else
+  #define __Pyx_PyIdentifier_FromString(s) PyUnicode_FromString(s)
+#endif
+#endif
+
+static PyObject *__Pyx_ImportModule(const char *name);
+
+static PyTypeObject *__Pyx_ImportType(const char *module_name, const char *class_name, size_t size, int strict);
 
 static int __Pyx_InitStrings(__Pyx_StringTabEntry *t);
 
 
 /* Module declarations from 'libcpp' */
+
+/* Module declarations from 'cpython.version' */
+
+/* Module declarations from 'cpython.ref' */
+
+/* Module declarations from 'cpython.exc' */
+
+/* Module declarations from 'cpython.module' */
+
+/* Module declarations from 'cpython.mem' */
+
+/* Module declarations from 'cpython.tuple' */
+
+/* Module declarations from 'cpython.list' */
+
+/* Module declarations from 'libc.string' */
+
+/* Module declarations from 'libc.stdio' */
+
+/* Module declarations from 'cpython.object' */
+
+/* Module declarations from 'cpython.sequence' */
+
+/* Module declarations from 'cpython.mapping' */
+
+/* Module declarations from 'cpython.iterator' */
+
+/* Module declarations from '__builtin__' */
+
+/* Module declarations from 'cpython.type' */
+static PyTypeObject *__pyx_ptype_7cpython_4type_type = 0;
+
+/* Module declarations from 'cpython.number' */
+
+/* Module declarations from 'cpython.int' */
+
+/* Module declarations from '__builtin__' */
+
+/* Module declarations from 'cpython.bool' */
+static PyTypeObject *__pyx_ptype_7cpython_4bool_bool = 0;
+
+/* Module declarations from 'cpython.long' */
+
+/* Module declarations from 'cpython.float' */
+
+/* Module declarations from '__builtin__' */
+
+/* Module declarations from 'cpython.complex' */
+static PyTypeObject *__pyx_ptype_7cpython_7complex_complex = 0;
+
+/* Module declarations from 'cpython.string' */
+
+/* Module declarations from 'cpython.unicode' */
+
+/* Module declarations from 'cpython.dict' */
+
+/* Module declarations from 'cpython.instance' */
+
+/* Module declarations from 'cpython.function' */
+
+/* Module declarations from 'cpython.method' */
+
+/* Module declarations from 'cpython.weakref' */
+
+/* Module declarations from 'cpython.getargs' */
+
+/* Module declarations from 'cpython.pythread' */
+
+/* Module declarations from 'cpython.pystate' */
+
+/* Module declarations from 'cpython.cobject' */
+
+/* Module declarations from 'cpython.oldbuffer' */
+
+/* Module declarations from 'cpython.set' */
+
+/* Module declarations from 'cpython.buffer' */
+
+/* Module declarations from 'cpython.bytes' */
+
+/* Module declarations from 'cpython.pycapsule' */
+
+/* Module declarations from 'cpython' */
+
+/* Module declarations from 'array' */
+
+/* Module declarations from 'cpython.array' */
+static PyTypeObject *__pyx_ptype_7cpython_5array_array = 0;
+static CYTHON_INLINE int __pyx_f_7cpython_5array_extend_buffer(arrayobject *, char *, Py_ssize_t); /*proto*/
+
+/* Module declarations from 'libc.stdlib' */
 
 /* Module declarations from 'native' */
 static PyTypeObject *__pyx_ptype_6native_PyCamM = 0;
@@ -722,6 +946,8 @@ int __pyx_module_is_main_native = 0;
 
 /* Implementation of 'native' */
 static PyObject *__pyx_builtin_property;
+static PyObject *__pyx_builtin_range;
+static PyObject *__pyx_builtin_MemoryError;
 static int __pyx_pf_6native_6PyCamM___cinit__(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_6native_6PyCamM_2wait_for_initialization(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_6native_6PyCamM_4are_cameras_initialized(struct __pyx_obj_6native_PyCamM *__pyx_v_self); /* proto */
@@ -738,7 +964,7 @@ static PyObject *__pyx_pf_6native_5PyCam_4set_led(struct __pyx_obj_6native_PyCam
 static PyObject *__pyx_pf_6native_5PyCam_6set_all_led(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_led); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_8set_status_intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_intensity); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_10status_ring_light_count(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_6native_5PyCam_12set_status_ring_lights(struct __pyx_obj_6native_PyCam *__pyx_v_self, int __pyx_v_count, struct __pyx_obj_6native_SColor *__pyx_v_light_color); /* proto */
+static PyObject *__pyx_pf_6native_5PyCam_12set_status_ring_lights(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_r, PyObject *__pyx_v_g, PyObject *__pyx_v_b); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_14ringlight_enabled_while_stopped(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_16set_ringlight_enabled_while_stopped(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_enable); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_18set_intensity(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
@@ -778,6 +1004,8 @@ static PyObject *__pyx_pf_6native_5PyCam_84imager_gain(struct __pyx_obj_6native_
 static PyObject *__pyx_pf_6native_5PyCam_86imager_gain_levels(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_88is_imager_gain_available(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_6native_5PyCam_90releasecam(struct __pyx_obj_6native_PyCam *__pyx_v_self); /* proto */
+static int __pyx_pf_7cpython_5array_5array___getbuffer__(arrayobject *__pyx_v_self, Py_buffer *__pyx_v_info, CYTHON_UNUSED int __pyx_v_flags); /* proto */
+static void __pyx_pf_7cpython_5array_5array_2__releasebuffer__(CYTHON_UNUSED arrayobject *__pyx_v_self, Py_buffer *__pyx_v_info); /* proto */
 static PyObject *__pyx_tp_new_6native_PyCamM(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_6native_SColor(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_6native_PyCam(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
@@ -790,14 +1018,16 @@ static char __pyx_k_Vash[] = "Vash";
 static char __pyx_k_file[] = "file";
 static char __pyx_k_main[] = "__main__";
 static char __pyx_k_test[] = "__test__";
-static char __pyx_k_count[] = "count";
+static char __pyx_k_array[] = "array";
 static char __pyx_k_print[] = "print";
+static char __pyx_k_range[] = "range";
 static char __pyx_k_value[] = "value";
 static char __pyx_k_author[] = "__author__";
 static char __pyx_k_enable[] = "enable";
 static char __pyx_k_format[] = "format";
+static char __pyx_k_import[] = "__import__";
 static char __pyx_k_property[] = "property";
-static char __pyx_k_light_color[] = "light_color";
+static char __pyx_k_MemoryError[] = "MemoryError";
 static char __pyx_k_camera_released[] = "camera released";
 static char __pyx_k_is_agc_available[] = "is_agc_available";
 static char __pyx_k_maximum_intensity[] = "maximum_intensity";
@@ -809,32 +1039,34 @@ static char __pyx_k_Intensity_Values_for_IR_LEDs_mus[] = "Intensity Values for I
 static char __pyx_k_This_camera_has_no_filter_switch[] = "This camera has no filter switch. You cannot set the IR filter!";
 static PyObject *__pyx_kp_s_Cannot_set_AGC_Automatic_Gain_Co;
 static PyObject *__pyx_kp_s_Intensity_Values_for_IR_LEDs_mus;
+static PyObject *__pyx_n_s_MemoryError;
 static PyObject *__pyx_kp_s_This_camera_has_no_filter_switch;
 static PyObject *__pyx_n_s_Vash;
 static PyObject *__pyx_n_s_are_cameras_initialized;
+static PyObject *__pyx_n_s_array;
 static PyObject *__pyx_n_s_author;
 static PyObject *__pyx_n_s_b;
 static PyObject *__pyx_kp_s_camera_released;
-static PyObject *__pyx_n_s_count;
 static PyObject *__pyx_n_s_enable;
 static PyObject *__pyx_n_s_end;
 static PyObject *__pyx_n_s_file;
 static PyObject *__pyx_n_s_format;
 static PyObject *__pyx_n_s_g;
+static PyObject *__pyx_n_s_import;
 static PyObject *__pyx_n_s_is_agc_available;
 static PyObject *__pyx_n_s_is_filter_switch_available;
 static PyObject *__pyx_n_s_led;
-static PyObject *__pyx_n_s_light_color;
 static PyObject *__pyx_n_s_main;
 static PyObject *__pyx_n_s_maximum_intensity;
 static PyObject *__pyx_n_s_minimum_intensity;
 static PyObject *__pyx_n_s_print;
 static PyObject *__pyx_n_s_property;
 static PyObject *__pyx_n_s_r;
+static PyObject *__pyx_n_s_range;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_value;
 
-/* "native.pyx":11
+/* "native.pyx":14
  *     cdef CameraManager *thisptr            # hold a C++ instance which we're wrapping
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -863,7 +1095,7 @@ static int __pyx_pf_6native_6PyCamM___cinit__(struct __pyx_obj_6native_PyCamM *_
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "native.pyx":12
+  /* "native.pyx":15
  * 
  *     def __cinit__(self):
  *         self.thisptr = &X()             # <<<<<<<<<<<<<<
@@ -872,7 +1104,7 @@ static int __pyx_pf_6native_6PyCamM___cinit__(struct __pyx_obj_6native_PyCamM *_
  */
   __pyx_v_self->thisptr = (&CameraLibrary::CameraManager::X());
 
-  /* "native.pyx":11
+  /* "native.pyx":14
  *     cdef CameraManager *thisptr            # hold a C++ instance which we're wrapping
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -886,7 +1118,7 @@ static int __pyx_pf_6native_6PyCamM___cinit__(struct __pyx_obj_6native_PyCamM *_
   return __pyx_r;
 }
 
-/* "native.pyx":14
+/* "native.pyx":17
  *         self.thisptr = &X()
  * 
  *     def wait_for_initialization(self):     #Optional execution stall until cameras are init'd             # <<<<<<<<<<<<<<
@@ -916,7 +1148,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_2wait_for_initialization(struct __pyx_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("wait_for_initialization", 0);
 
-  /* "native.pyx":15
+  /* "native.pyx":18
  * 
  *     def wait_for_initialization(self):     #Optional execution stall until cameras are init'd
  *         return self.thisptr.WaitForInitialization()             # <<<<<<<<<<<<<<
@@ -924,13 +1156,13 @@ static PyObject *__pyx_pf_6native_6PyCamM_2wait_for_initialization(struct __pyx_
  *     def are_cameras_initialized(self):     #Check and see if all attached cameras are init'd
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->WaitForInitialization()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->WaitForInitialization()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":14
+  /* "native.pyx":17
  *         self.thisptr = &X()
  * 
  *     def wait_for_initialization(self):     #Optional execution stall until cameras are init'd             # <<<<<<<<<<<<<<
@@ -949,7 +1181,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_2wait_for_initialization(struct __pyx_
   return __pyx_r;
 }
 
-/* "native.pyx":17
+/* "native.pyx":20
  *         return self.thisptr.WaitForInitialization()
  * 
  *     def are_cameras_initialized(self):     #Check and see if all attached cameras are init'd             # <<<<<<<<<<<<<<
@@ -981,7 +1213,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_4are_cameras_initialized(struct __pyx_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("are_cameras_initialized", 0);
 
-  /* "native.pyx":18
+  /* "native.pyx":21
  * 
  *     def are_cameras_initialized(self):     #Check and see if all attached cameras are init'd
  *         return self.are_cameras_initialized()             # <<<<<<<<<<<<<<
@@ -989,7 +1221,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_4are_cameras_initialized(struct __pyx_
  *     def get_camera(self):                  #Get a random attached & initialized camera
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_are_cameras_initialized); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_are_cameras_initialized); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
@@ -1002,10 +1234,10 @@ static PyObject *__pyx_pf_6native_6PyCamM_4are_cameras_initialized(struct __pyx_
     }
   }
   if (__pyx_t_3) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   } else {
-    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 18; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   }
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -1013,7 +1245,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_4are_cameras_initialized(struct __pyx_
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":17
+  /* "native.pyx":20
  *         return self.thisptr.WaitForInitialization()
  * 
  *     def are_cameras_initialized(self):     #Check and see if all attached cameras are init'd             # <<<<<<<<<<<<<<
@@ -1034,7 +1266,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_4are_cameras_initialized(struct __pyx_
   return __pyx_r;
 }
 
-/* "native.pyx":20
+/* "native.pyx":23
  *         return self.are_cameras_initialized()
  * 
  *     def get_camera(self):                  #Get a random attached & initialized camera             # <<<<<<<<<<<<<<
@@ -1065,19 +1297,19 @@ static PyObject *__pyx_pf_6native_6PyCamM_6get_camera(struct __pyx_obj_6native_P
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("get_camera", 0);
 
-  /* "native.pyx":21
+  /* "native.pyx":24
  * 
  *     def get_camera(self):                  #Get a random attached & initialized camera
  *         cam = PyCam()             # <<<<<<<<<<<<<<
  *         cam.thisptr = self.thisptr.GetCamera()
  *         return cam
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)((PyObject*)__pyx_ptype_6native_PyCam)), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)((PyObject*)__pyx_ptype_6native_PyCam)), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 24; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_cam = ((struct __pyx_obj_6native_PyCam *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "native.pyx":22
+  /* "native.pyx":25
  *     def get_camera(self):                  #Get a random attached & initialized camera
  *         cam = PyCam()
  *         cam.thisptr = self.thisptr.GetCamera()             # <<<<<<<<<<<<<<
@@ -1086,7 +1318,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_6get_camera(struct __pyx_obj_6native_P
  */
   __pyx_v_cam->thisptr = __pyx_v_self->thisptr->GetCamera();
 
-  /* "native.pyx":23
+  /* "native.pyx":26
  *         cam = PyCam()
  *         cam.thisptr = self.thisptr.GetCamera()
  *         return cam             # <<<<<<<<<<<<<<
@@ -1098,7 +1330,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_6get_camera(struct __pyx_obj_6native_P
   __pyx_r = ((PyObject *)__pyx_v_cam);
   goto __pyx_L0;
 
-  /* "native.pyx":20
+  /* "native.pyx":23
  *         return self.are_cameras_initialized()
  * 
  *     def get_camera(self):                  #Get a random attached & initialized camera             # <<<<<<<<<<<<<<
@@ -1118,7 +1350,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_6get_camera(struct __pyx_obj_6native_P
   return __pyx_r;
 }
 
-/* "native.pyx":26
+/* "native.pyx":29
  * 
  * 
  *     def shutdown(self):                    #Shutdown Camera Library             # <<<<<<<<<<<<<<
@@ -1148,7 +1380,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_8shutdown(struct __pyx_obj_6native_PyC
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("shutdown", 0);
 
-  /* "native.pyx":27
+  /* "native.pyx":30
  * 
  *     def shutdown(self):                    #Shutdown Camera Library
  *         return self.thisptr.Shutdown()             # <<<<<<<<<<<<<<
@@ -1156,13 +1388,13 @@ static PyObject *__pyx_pf_6native_6PyCamM_8shutdown(struct __pyx_obj_6native_PyC
  *     def are_cameras_shutdown(self):        #Check and see if all cameras are shutdown
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_void_to_None(__pyx_v_self->thisptr->Shutdown()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_void_to_None(__pyx_v_self->thisptr->Shutdown()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 30; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":26
+  /* "native.pyx":29
  * 
  * 
  *     def shutdown(self):                    #Shutdown Camera Library             # <<<<<<<<<<<<<<
@@ -1181,7 +1413,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_8shutdown(struct __pyx_obj_6native_PyC
   return __pyx_r;
 }
 
-/* "native.pyx":29
+/* "native.pyx":32
  *         return self.thisptr.Shutdown()
  * 
  *     def are_cameras_shutdown(self):        #Check and see if all cameras are shutdown             # <<<<<<<<<<<<<<
@@ -1211,7 +1443,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_10are_cameras_shutdown(struct __pyx_ob
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("are_cameras_shutdown", 0);
 
-  /* "native.pyx":30
+  /* "native.pyx":33
  * 
  *     def are_cameras_shutdown(self):        #Check and see if all cameras are shutdown
  *         return self.thisptr.AreCamerasShutdown()             # <<<<<<<<<<<<<<
@@ -1219,13 +1451,13 @@ static PyObject *__pyx_pf_6native_6PyCamM_10are_cameras_shutdown(struct __pyx_ob
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->AreCamerasShutdown()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 30; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->AreCamerasShutdown()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 33; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":29
+  /* "native.pyx":32
  *         return self.thisptr.Shutdown()
  * 
  *     def are_cameras_shutdown(self):        #Check and see if all cameras are shutdown             # <<<<<<<<<<<<<<
@@ -1244,7 +1476,7 @@ static PyObject *__pyx_pf_6native_6PyCamM_10are_cameras_shutdown(struct __pyx_ob
   return __pyx_r;
 }
 
-/* "native.pyx":43
+/* "native.pyx":46
  *     cdef sStatusLightColor *thisptr
  * 
  *     def __cinit__(self, unsigned char r, unsigned char g, unsigned char b):             # <<<<<<<<<<<<<<
@@ -1285,16 +1517,16 @@ static int __pyx_pw_6native_6SColor_1__cinit__(PyObject *__pyx_v_self, PyObject 
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_g)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 3, 3, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 3, 3, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
         case  2:
         if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_b)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 3, 3, 2); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 3, 3, 2); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 3) {
       goto __pyx_L5_argtuple_error;
@@ -1303,13 +1535,13 @@ static int __pyx_pw_6native_6SColor_1__cinit__(PyObject *__pyx_v_self, PyObject 
       values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
       values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
     }
-    __pyx_v_r = __Pyx_PyInt_As_unsigned_char(values[0]); if (unlikely((__pyx_v_r == (unsigned char)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
-    __pyx_v_g = __Pyx_PyInt_As_unsigned_char(values[1]); if (unlikely((__pyx_v_g == (unsigned char)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
-    __pyx_v_b = __Pyx_PyInt_As_unsigned_char(values[2]); if (unlikely((__pyx_v_b == (unsigned char)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+    __pyx_v_r = __Pyx_PyInt_As_unsigned_char(values[0]); if (unlikely((__pyx_v_r == (unsigned char)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+    __pyx_v_g = __Pyx_PyInt_As_unsigned_char(values[1]); if (unlikely((__pyx_v_g == (unsigned char)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+    __pyx_v_b = __Pyx_PyInt_As_unsigned_char(values[2]); if (unlikely((__pyx_v_b == (unsigned char)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 46; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("native.SColor.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -1331,7 +1563,7 @@ static int __pyx_pf_6native_6SColor___cinit__(struct __pyx_obj_6native_SColor *_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "native.pyx":44
+  /* "native.pyx":47
  * 
  *     def __cinit__(self, unsigned char r, unsigned char g, unsigned char b):
  *         self.thisptr = new sStatusLightColor()             # <<<<<<<<<<<<<<
@@ -1342,11 +1574,11 @@ static int __pyx_pf_6native_6SColor___cinit__(struct __pyx_obj_6native_SColor *_
     __pyx_t_1 = new CameraLibrary::sStatusLightColor();
   } catch(...) {
     __Pyx_CppExn2PyErr();
-    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 44; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    {__pyx_filename = __pyx_f[0]; __pyx_lineno = 47; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   }
   __pyx_v_self->thisptr = __pyx_t_1;
 
-  /* "native.pyx":45
+  /* "native.pyx":48
  *     def __cinit__(self, unsigned char r, unsigned char g, unsigned char b):
  *         self.thisptr = new sStatusLightColor()
  *         self.thisptr.Red = r             # <<<<<<<<<<<<<<
@@ -1355,7 +1587,7 @@ static int __pyx_pf_6native_6SColor___cinit__(struct __pyx_obj_6native_SColor *_
  */
   __pyx_v_self->thisptr->Red = __pyx_v_r;
 
-  /* "native.pyx":46
+  /* "native.pyx":49
  *         self.thisptr = new sStatusLightColor()
  *         self.thisptr.Red = r
  *         self.thisptr.Green = g             # <<<<<<<<<<<<<<
@@ -1364,7 +1596,7 @@ static int __pyx_pf_6native_6SColor___cinit__(struct __pyx_obj_6native_SColor *_
  */
   __pyx_v_self->thisptr->Green = __pyx_v_g;
 
-  /* "native.pyx":47
+  /* "native.pyx":50
  *         self.thisptr.Red = r
  *         self.thisptr.Green = g
  *         self.thisptr.Blue = b             # <<<<<<<<<<<<<<
@@ -1373,7 +1605,7 @@ static int __pyx_pf_6native_6SColor___cinit__(struct __pyx_obj_6native_SColor *_
  */
   __pyx_v_self->thisptr->Blue = __pyx_v_b;
 
-  /* "native.pyx":43
+  /* "native.pyx":46
  *     cdef sStatusLightColor *thisptr
  * 
  *     def __cinit__(self, unsigned char r, unsigned char g, unsigned char b):             # <<<<<<<<<<<<<<
@@ -1392,7 +1624,7 @@ static int __pyx_pf_6native_6SColor___cinit__(struct __pyx_obj_6native_SColor *_
   return __pyx_r;
 }
 
-/* "native.pyx":50
+/* "native.pyx":53
  * 
  *     @property
  *     def r(self):             # <<<<<<<<<<<<<<
@@ -1422,7 +1654,7 @@ static PyObject *__pyx_pf_6native_6SColor_2r(struct __pyx_obj_6native_SColor *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("r", 0);
 
-  /* "native.pyx":51
+  /* "native.pyx":54
  *     @property
  *     def r(self):
  *         return self.thisptr.Red             # <<<<<<<<<<<<<<
@@ -1430,13 +1662,13 @@ static PyObject *__pyx_pf_6native_6SColor_2r(struct __pyx_obj_6native_SColor *__
  *     @property
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_unsigned_char(__pyx_v_self->thisptr->Red); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 51; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_unsigned_char(__pyx_v_self->thisptr->Red); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 54; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":50
+  /* "native.pyx":53
  * 
  *     @property
  *     def r(self):             # <<<<<<<<<<<<<<
@@ -1455,7 +1687,7 @@ static PyObject *__pyx_pf_6native_6SColor_2r(struct __pyx_obj_6native_SColor *__
   return __pyx_r;
 }
 
-/* "native.pyx":54
+/* "native.pyx":57
  * 
  *     @property
  *     def g(self):             # <<<<<<<<<<<<<<
@@ -1485,7 +1717,7 @@ static PyObject *__pyx_pf_6native_6SColor_4g(struct __pyx_obj_6native_SColor *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("g", 0);
 
-  /* "native.pyx":55
+  /* "native.pyx":58
  *     @property
  *     def g(self):
  *         return self.thisptr.Green             # <<<<<<<<<<<<<<
@@ -1493,13 +1725,13 @@ static PyObject *__pyx_pf_6native_6SColor_4g(struct __pyx_obj_6native_SColor *__
  *     @property
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_unsigned_char(__pyx_v_self->thisptr->Green); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 55; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_unsigned_char(__pyx_v_self->thisptr->Green); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 58; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":54
+  /* "native.pyx":57
  * 
  *     @property
  *     def g(self):             # <<<<<<<<<<<<<<
@@ -1518,7 +1750,7 @@ static PyObject *__pyx_pf_6native_6SColor_4g(struct __pyx_obj_6native_SColor *__
   return __pyx_r;
 }
 
-/* "native.pyx":58
+/* "native.pyx":61
  * 
  *     @property
  *     def b(self):             # <<<<<<<<<<<<<<
@@ -1548,7 +1780,7 @@ static PyObject *__pyx_pf_6native_6SColor_6b(struct __pyx_obj_6native_SColor *__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("b", 0);
 
-  /* "native.pyx":59
+  /* "native.pyx":62
  *     @property
  *     def b(self):
  *         return self.thisptr.Blue             # <<<<<<<<<<<<<<
@@ -1556,13 +1788,13 @@ static PyObject *__pyx_pf_6native_6SColor_6b(struct __pyx_obj_6native_SColor *__
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_unsigned_char(__pyx_v_self->thisptr->Blue); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 59; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_unsigned_char(__pyx_v_self->thisptr->Blue); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 62; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":58
+  /* "native.pyx":61
  * 
  *     @property
  *     def b(self):             # <<<<<<<<<<<<<<
@@ -1581,7 +1813,7 @@ static PyObject *__pyx_pf_6native_6SColor_6b(struct __pyx_obj_6native_SColor *__
   return __pyx_r;
 }
 
-/* "native.pyx":68
+/* "native.pyx":71
  *  #     self.thisptr = thisptr
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -1610,7 +1842,7 @@ static int __pyx_pf_6native_5PyCam___cinit__(struct __pyx_obj_6native_PyCam *__p
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "native.pyx":69
+  /* "native.pyx":72
  * 
  *     def __cinit__(self):
  *         self.thisptr = NULL             # <<<<<<<<<<<<<<
@@ -1619,7 +1851,7 @@ static int __pyx_pf_6native_5PyCam___cinit__(struct __pyx_obj_6native_PyCam *__p
  */
   __pyx_v_self->thisptr = NULL;
 
-  /* "native.pyx":68
+  /* "native.pyx":71
  *  #     self.thisptr = thisptr
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -1633,7 +1865,7 @@ static int __pyx_pf_6native_5PyCam___cinit__(struct __pyx_obj_6native_PyCam *__p
   return __pyx_r;
 }
 
-/* "native.pyx":71
+/* "native.pyx":74
  *         self.thisptr = NULL
  * 
  *     def set_numeric(self, enable, value):             # <<<<<<<<<<<<<<
@@ -1673,11 +1905,11 @@ static PyObject *__pyx_pw_6native_5PyCam_3set_numeric(PyObject *__pyx_v_self, Py
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_value)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("set_numeric", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 71; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("set_numeric", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 74; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_numeric") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 71; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_numeric") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 74; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -1690,7 +1922,7 @@ static PyObject *__pyx_pw_6native_5PyCam_3set_numeric(PyObject *__pyx_v_self, Py
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("set_numeric", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 71; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("set_numeric", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 74; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("native.PyCam.set_numeric", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -1713,18 +1945,18 @@ static PyObject *__pyx_pf_6native_5PyCam_2set_numeric(struct __pyx_obj_6native_P
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_numeric", 0);
 
-  /* "native.pyx":73
+  /* "native.pyx":76
  *     def set_numeric(self, enable, value):
  *         """Turn on/off numeric camera LEDs and change the value they show"""
  *         self.thisptr.SetNumeric(enable , value)             # <<<<<<<<<<<<<<
  * 
  *     def set_led(self, led, enable):                        #Turn Camera LEDs On/Off. Could for example turn off the AimAssistLED blinking at the back of the camera when it is initialized.
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 73; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 73; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 76; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 76; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetNumeric(__pyx_t_1, __pyx_t_2);
 
-  /* "native.pyx":71
+  /* "native.pyx":74
  *         self.thisptr = NULL
  * 
  *     def set_numeric(self, enable, value):             # <<<<<<<<<<<<<<
@@ -1744,7 +1976,7 @@ static PyObject *__pyx_pf_6native_5PyCam_2set_numeric(struct __pyx_obj_6native_P
   return __pyx_r;
 }
 
-/* "native.pyx":75
+/* "native.pyx":78
  *         self.thisptr.SetNumeric(enable , value)
  * 
  *     def set_led(self, led, enable):                        #Turn Camera LEDs On/Off. Could for example turn off the AimAssistLED blinking at the back of the camera when it is initialized.             # <<<<<<<<<<<<<<
@@ -1783,11 +2015,11 @@ static PyObject *__pyx_pw_6native_5PyCam_5set_led(PyObject *__pyx_v_self, PyObje
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_enable)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("set_led", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 75; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("set_led", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 78; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_led") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 75; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_led") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 78; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -1800,7 +2032,7 @@ static PyObject *__pyx_pw_6native_5PyCam_5set_led(PyObject *__pyx_v_self, PyObje
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("set_led", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 75; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("set_led", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 78; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("native.PyCam.set_led", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -1823,18 +2055,18 @@ static PyObject *__pyx_pf_6native_5PyCam_4set_led(struct __pyx_obj_6native_PyCam
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_led", 0);
 
-  /* "native.pyx":76
+  /* "native.pyx":79
  * 
  *     def set_led(self, led, enable):                        #Turn Camera LEDs On/Off. Could for example turn off the AimAssistLED blinking at the back of the camera when it is initialized.
  *         self.thisptr.SetLED(led, enable)             # <<<<<<<<<<<<<<
  * 
  *     def set_all_led(self, led):
  */
-  __pyx_t_1 = ((enum CameraLibrary::eStatusLEDs)PyInt_AsLong(__pyx_v_led)); if (unlikely(PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 76; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_2 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 76; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = ((enum CameraLibrary::eStatusLEDs)PyInt_AsLong(__pyx_v_led)); if (unlikely(PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 79; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_2 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 79; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetLED(__pyx_t_1, __pyx_t_2);
 
-  /* "native.pyx":75
+  /* "native.pyx":78
  *         self.thisptr.SetNumeric(enable , value)
  * 
  *     def set_led(self, led, enable):                        #Turn Camera LEDs On/Off. Could for example turn off the AimAssistLED blinking at the back of the camera when it is initialized.             # <<<<<<<<<<<<<<
@@ -1854,7 +2086,7 @@ static PyObject *__pyx_pf_6native_5PyCam_4set_led(struct __pyx_obj_6native_PyCam
   return __pyx_r;
 }
 
-/* "native.pyx":78
+/* "native.pyx":81
  *         self.thisptr.SetLED(led, enable)
  * 
  *     def set_all_led(self, led):             # <<<<<<<<<<<<<<
@@ -1885,17 +2117,17 @@ static PyObject *__pyx_pf_6native_5PyCam_6set_all_led(struct __pyx_obj_6native_P
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_all_led", 0);
 
-  /* "native.pyx":80
+  /* "native.pyx":83
  *     def set_all_led(self, led):
  *         """Turn all camera LEDs On/Off."""
  *         self.thisptr.SetAllLED(led)             # <<<<<<<<<<<<<<
  * 
  *     def set_status_intensity(self, intensity):             #All Status LED to (0-->255). ##So far not sure what that means
  */
-  __pyx_t_1 = ((enum CameraLibrary::eStatusLEDs)PyInt_AsLong(__pyx_v_led)); if (unlikely(PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 80; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = ((enum CameraLibrary::eStatusLEDs)PyInt_AsLong(__pyx_v_led)); if (unlikely(PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetAllLED(__pyx_t_1);
 
-  /* "native.pyx":78
+  /* "native.pyx":81
  *         self.thisptr.SetLED(led, enable)
  * 
  *     def set_all_led(self, led):             # <<<<<<<<<<<<<<
@@ -1915,7 +2147,7 @@ static PyObject *__pyx_pf_6native_5PyCam_6set_all_led(struct __pyx_obj_6native_P
   return __pyx_r;
 }
 
-/* "native.pyx":82
+/* "native.pyx":85
  *         self.thisptr.SetAllLED(led)
  * 
  *     def set_status_intensity(self, intensity):             #All Status LED to (0-->255). ##So far not sure what that means             # <<<<<<<<<<<<<<
@@ -1945,17 +2177,17 @@ static PyObject *__pyx_pf_6native_5PyCam_8set_status_intensity(struct __pyx_obj_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_status_intensity", 0);
 
-  /* "native.pyx":83
+  /* "native.pyx":86
  * 
  *     def set_status_intensity(self, intensity):             #All Status LED to (0-->255). ##So far not sure what that means
  *         self.thisptr.SetStatusIntensity(intensity)             # <<<<<<<<<<<<<<
  * 
  *     def status_ring_light_count(self):                     #Number of status ring LEDs ##function is also (maybe redefined?) in camerarev26.h and 31 and 33.
  */
-  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_intensity); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 83; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_intensity); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 86; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetStatusIntensity(__pyx_t_1);
 
-  /* "native.pyx":82
+  /* "native.pyx":85
  *         self.thisptr.SetAllLED(led)
  * 
  *     def set_status_intensity(self, intensity):             #All Status LED to (0-->255). ##So far not sure what that means             # <<<<<<<<<<<<<<
@@ -1975,7 +2207,7 @@ static PyObject *__pyx_pf_6native_5PyCam_8set_status_intensity(struct __pyx_obj_
   return __pyx_r;
 }
 
-/* "native.pyx":85
+/* "native.pyx":88
  *         self.thisptr.SetStatusIntensity(intensity)
  * 
  *     def status_ring_light_count(self):                     #Number of status ring LEDs ##function is also (maybe redefined?) in camerarev26.h and 31 and 33.             # <<<<<<<<<<<<<<
@@ -2005,21 +2237,21 @@ static PyObject *__pyx_pf_6native_5PyCam_10status_ring_light_count(struct __pyx_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("status_ring_light_count", 0);
 
-  /* "native.pyx":86
+  /* "native.pyx":89
  * 
  *     def status_ring_light_count(self):                     #Number of status ring LEDs ##function is also (maybe redefined?) in camerarev26.h and 31 and 33.
  *         return self.thisptr.StatusRingLightCount()             # <<<<<<<<<<<<<<
  * 
- *     def set_status_ring_lights(self, int count, SColor light_color):
+ *     # def set_status_ring_lights(self, unsigned char r, unsigned char g, unsigned char b):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->StatusRingLightCount()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 86; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->StatusRingLightCount()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 89; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":85
+  /* "native.pyx":88
  *         self.thisptr.SetStatusIntensity(intensity)
  * 
  *     def status_ring_light_count(self):                     #Number of status ring LEDs ##function is also (maybe redefined?) in camerarev26.h and 31 and 33.             # <<<<<<<<<<<<<<
@@ -2038,19 +2270,20 @@ static PyObject *__pyx_pf_6native_5PyCam_10status_ring_light_count(struct __pyx_
   return __pyx_r;
 }
 
-/* "native.pyx":88
- *         return self.thisptr.StatusRingLightCount()
+/* "native.pyx":104
+ *     #         free(colors)
  * 
- *     def set_status_ring_lights(self, int count, SColor light_color):             # <<<<<<<<<<<<<<
- *         self.thisptr.SetStatusRingLights(count, light_color.thisptr)
- * 
+ *     def set_status_ring_lights(self, r, g, b):             # <<<<<<<<<<<<<<
+ *         count = self.thisptr.StatusRingLightCount()
+ *         cdef sStatusLightColor colors[16]
  */
 
 /* Python wrapper */
 static PyObject *__pyx_pw_6native_5PyCam_13set_status_ring_lights(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static PyObject *__pyx_pw_6native_5PyCam_13set_status_ring_lights(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
-  int __pyx_v_count;
-  struct __pyx_obj_6native_SColor *__pyx_v_light_color = 0;
+  PyObject *__pyx_v_r = 0;
+  PyObject *__pyx_v_g = 0;
+  PyObject *__pyx_v_b = 0;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -2058,12 +2291,13 @@ static PyObject *__pyx_pw_6native_5PyCam_13set_status_ring_lights(PyObject *__py
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("set_status_ring_lights (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_count,&__pyx_n_s_light_color,0};
-    PyObject* values[2] = {0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_r,&__pyx_n_s_g,&__pyx_n_s_b,0};
+    PyObject* values[3] = {0,0,0};
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
         case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
         case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
         case  0: break;
@@ -2072,76 +2306,141 @@ static PyObject *__pyx_pw_6native_5PyCam_13set_status_ring_lights(PyObject *__py
       kw_args = PyDict_Size(__pyx_kwds);
       switch (pos_args) {
         case  0:
-        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_count)) != 0)) kw_args--;
+        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_r)) != 0)) kw_args--;
         else goto __pyx_L5_argtuple_error;
         case  1:
-        if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_light_color)) != 0)) kw_args--;
+        if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_g)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("set_status_ring_lights", 1, 2, 2, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 88; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("set_status_ring_lights", 1, 3, 3, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        }
+        case  2:
+        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_b)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("set_status_ring_lights", 1, 3, 3, 2); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_status_ring_lights") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 88; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "set_status_ring_lights") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
-    } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 3) {
       goto __pyx_L5_argtuple_error;
     } else {
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
       values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+      values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
     }
-    __pyx_v_count = __Pyx_PyInt_As_int(values[0]); if (unlikely((__pyx_v_count == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 88; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
-    __pyx_v_light_color = ((struct __pyx_obj_6native_SColor *)values[1]);
+    __pyx_v_r = values[0];
+    __pyx_v_g = values[1];
+    __pyx_v_b = values[2];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("set_status_ring_lights", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 88; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("set_status_ring_lights", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 104; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("native.PyCam.set_status_ring_lights", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_light_color), __pyx_ptype_6native_SColor, 1, "light_color", 0))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 88; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_r = __pyx_pf_6native_5PyCam_12set_status_ring_lights(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), __pyx_v_count, __pyx_v_light_color);
+  __pyx_r = __pyx_pf_6native_5PyCam_12set_status_ring_lights(((struct __pyx_obj_6native_PyCam *)__pyx_v_self), __pyx_v_r, __pyx_v_g, __pyx_v_b);
 
   /* function exit code */
-  goto __pyx_L0;
-  __pyx_L1_error:;
-  __pyx_r = NULL;
-  __pyx_L0:;
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6native_5PyCam_12set_status_ring_lights(struct __pyx_obj_6native_PyCam *__pyx_v_self, int __pyx_v_count, struct __pyx_obj_6native_SColor *__pyx_v_light_color) {
+static PyObject *__pyx_pf_6native_5PyCam_12set_status_ring_lights(struct __pyx_obj_6native_PyCam *__pyx_v_self, PyObject *__pyx_v_r, PyObject *__pyx_v_g, PyObject *__pyx_v_b) {
+  int __pyx_v_count;
+  CameraLibrary::sStatusLightColor __pyx_v_colors[16];
+  long __pyx_v_i;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
+  long __pyx_t_1;
+  unsigned char __pyx_t_2;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_status_ring_lights", 0);
 
-  /* "native.pyx":89
+  /* "native.pyx":105
  * 
- *     def set_status_ring_lights(self, int count, SColor light_color):
- *         self.thisptr.SetStatusRingLights(count, light_color.thisptr)             # <<<<<<<<<<<<<<
+ *     def set_status_ring_lights(self, r, g, b):
+ *         count = self.thisptr.StatusRingLightCount()             # <<<<<<<<<<<<<<
+ *         cdef sStatusLightColor colors[16]
+ *         for i in range(16):
+ */
+  __pyx_v_count = __pyx_v_self->thisptr->StatusRingLightCount();
+
+  /* "native.pyx":107
+ *         count = self.thisptr.StatusRingLightCount()
+ *         cdef sStatusLightColor colors[16]
+ *         for i in range(16):             # <<<<<<<<<<<<<<
+ *             colors[i].Red = r
+ *             colors[i].Blue = b
+ */
+  for (__pyx_t_1 = 0; __pyx_t_1 < 16; __pyx_t_1+=1) {
+    __pyx_v_i = __pyx_t_1;
+
+    /* "native.pyx":108
+ *         cdef sStatusLightColor colors[16]
+ *         for i in range(16):
+ *             colors[i].Red = r             # <<<<<<<<<<<<<<
+ *             colors[i].Blue = b
+ *             colors[i].Green = g
+ */
+    __pyx_t_2 = __Pyx_PyInt_As_unsigned_char(__pyx_v_r); if (unlikely((__pyx_t_2 == (unsigned char)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 108; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    (__pyx_v_colors[__pyx_v_i]).Red = __pyx_t_2;
+
+    /* "native.pyx":109
+ *         for i in range(16):
+ *             colors[i].Red = r
+ *             colors[i].Blue = b             # <<<<<<<<<<<<<<
+ *             colors[i].Green = g
+ *         self.thisptr.SetStatusRingLights(count, colors)
+ */
+    __pyx_t_2 = __Pyx_PyInt_As_unsigned_char(__pyx_v_b); if (unlikely((__pyx_t_2 == (unsigned char)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 109; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    (__pyx_v_colors[__pyx_v_i]).Blue = __pyx_t_2;
+
+    /* "native.pyx":110
+ *             colors[i].Red = r
+ *             colors[i].Blue = b
+ *             colors[i].Green = g             # <<<<<<<<<<<<<<
+ *         self.thisptr.SetStatusRingLights(count, colors)
+ * 
+ */
+    __pyx_t_2 = __Pyx_PyInt_As_unsigned_char(__pyx_v_g); if (unlikely((__pyx_t_2 == (unsigned char)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 110; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    (__pyx_v_colors[__pyx_v_i]).Green = __pyx_t_2;
+  }
+
+  /* "native.pyx":111
+ *             colors[i].Blue = b
+ *             colors[i].Green = g
+ *         self.thisptr.SetStatusRingLights(count, colors)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_v_self->thisptr->SetStatusRingLights(__pyx_v_count, __pyx_v_light_color->thisptr);
+  __pyx_v_self->thisptr->SetStatusRingLights(__pyx_v_count, __pyx_v_colors);
 
-  /* "native.pyx":88
- *         return self.thisptr.StatusRingLightCount()
+  /* "native.pyx":104
+ *     #         free(colors)
  * 
- *     def set_status_ring_lights(self, int count, SColor light_color):             # <<<<<<<<<<<<<<
- *         self.thisptr.SetStatusRingLights(count, light_color.thisptr)
- * 
+ *     def set_status_ring_lights(self, r, g, b):             # <<<<<<<<<<<<<<
+ *         count = self.thisptr.StatusRingLightCount()
+ *         cdef sStatusLightColor colors[16]
  */
 
   /* function exit code */
   __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("native.PyCam.set_status_ring_lights", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-/* "native.pyx":93
+/* "native.pyx":114
  * 
  * 
  *     def ringlight_enabled_while_stopped(self):             ##returns if the function below is enabled or disabled.             # <<<<<<<<<<<<<<
@@ -2171,7 +2470,7 @@ static PyObject *__pyx_pf_6native_5PyCam_14ringlight_enabled_while_stopped(struc
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("ringlight_enabled_while_stopped", 0);
 
-  /* "native.pyx":94
+  /* "native.pyx":115
  * 
  *     def ringlight_enabled_while_stopped(self):             ##returns if the function below is enabled or disabled.
  *         return self.thisptr.RinglightEnabledWhileStopped()             # <<<<<<<<<<<<<<
@@ -2179,13 +2478,13 @@ static PyObject *__pyx_pf_6native_5PyCam_14ringlight_enabled_while_stopped(struc
  *     def set_ringlight_enabled_while_stopped(self,enable):  ## When the camera is initialized but does not record (i.e. is stopped) one can change ring light color. This also switches on and off the IR LEDs.
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->RinglightEnabledWhileStopped()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 94; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->RinglightEnabledWhileStopped()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 115; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":93
+  /* "native.pyx":114
  * 
  * 
  *     def ringlight_enabled_while_stopped(self):             ##returns if the function below is enabled or disabled.             # <<<<<<<<<<<<<<
@@ -2204,7 +2503,7 @@ static PyObject *__pyx_pf_6native_5PyCam_14ringlight_enabled_while_stopped(struc
   return __pyx_r;
 }
 
-/* "native.pyx":96
+/* "native.pyx":117
  *         return self.thisptr.RinglightEnabledWhileStopped()
  * 
  *     def set_ringlight_enabled_while_stopped(self,enable):  ## When the camera is initialized but does not record (i.e. is stopped) one can change ring light color. This also switches on and off the IR LEDs.             # <<<<<<<<<<<<<<
@@ -2234,17 +2533,17 @@ static PyObject *__pyx_pf_6native_5PyCam_16set_ringlight_enabled_while_stopped(s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_ringlight_enabled_while_stopped", 0);
 
-  /* "native.pyx":97
+  /* "native.pyx":118
  * 
  *     def set_ringlight_enabled_while_stopped(self,enable):  ## When the camera is initialized but does not record (i.e. is stopped) one can change ring light color. This also switches on and off the IR LEDs.
  *         self.thisptr.SetRinglightEnabledWhileStopped(enable)             # <<<<<<<<<<<<<<
  * 
  *     def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the IR LEDs
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 97; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 118; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetRinglightEnabledWhileStopped(__pyx_t_1);
 
-  /* "native.pyx":96
+  /* "native.pyx":117
  *         return self.thisptr.RinglightEnabledWhileStopped()
  * 
  *     def set_ringlight_enabled_while_stopped(self,enable):  ## When the camera is initialized but does not record (i.e. is stopped) one can change ring light color. This also switches on and off the IR LEDs.             # <<<<<<<<<<<<<<
@@ -2264,7 +2563,7 @@ static PyObject *__pyx_pf_6native_5PyCam_16set_ringlight_enabled_while_stopped(s
   return __pyx_r;
 }
 
-/* "native.pyx":99
+/* "native.pyx":120
  *         self.thisptr.SetRinglightEnabledWhileStopped(enable)
  * 
  *     def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the IR LEDs             # <<<<<<<<<<<<<<
@@ -2302,7 +2601,7 @@ static PyObject *__pyx_pf_6native_5PyCam_18set_intensity(struct __pyx_obj_6nativ
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_intensity", 0);
 
-  /* "native.pyx":100
+  /* "native.pyx":121
  * 
  *     def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the IR LEDs
  *         assert self.minimum_intensity() <= value <= self.maximum_intensity(), "Intensity Values for IR LEDs must be in range {}-{}".format(             # <<<<<<<<<<<<<<
@@ -2311,7 +2610,7 @@ static PyObject *__pyx_pf_6native_5PyCam_18set_intensity(struct __pyx_obj_6nativ
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(!Py_OptimizeFlag)) {
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_minimum_intensity); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_minimum_intensity); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_t_3 = NULL;
     if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
@@ -2324,17 +2623,17 @@ static PyObject *__pyx_pf_6native_5PyCam_18set_intensity(struct __pyx_obj_6nativ
       }
     }
     if (__pyx_t_3) {
-      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     } else {
-      __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = PyObject_RichCompare(__pyx_t_1, __pyx_v_value, Py_LE); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = PyObject_RichCompare(__pyx_t_1, __pyx_v_value, Py_LE); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     if (__Pyx_PyObject_IsTrue(__pyx_t_2)) {
       __Pyx_DECREF(__pyx_t_2);
-      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_maximum_intensity); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_maximum_intensity); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_4);
       __pyx_t_5 = NULL;
       if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_4))) {
@@ -2347,31 +2646,31 @@ static PyObject *__pyx_pf_6native_5PyCam_18set_intensity(struct __pyx_obj_6nativ
         }
       }
       if (__pyx_t_5) {
-        __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+        __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       } else {
-        __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_t_4); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+        __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_t_4); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       }
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_t_2 = PyObject_RichCompare(__pyx_v_value, __pyx_t_3, Py_LE); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_2 = PyObject_RichCompare(__pyx_v_value, __pyx_t_3, Py_LE); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     }
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_6 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_6 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     if (unlikely(!__pyx_t_6)) {
-      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Intensity_Values_for_IR_LEDs_mus, __pyx_n_s_format); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_kp_s_Intensity_Values_for_IR_LEDs_mus, __pyx_n_s_format); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_1);
 
-      /* "native.pyx":101
+      /* "native.pyx":122
  *     def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the IR LEDs
  *         assert self.minimum_intensity() <= value <= self.maximum_intensity(), "Intensity Values for IR LEDs must be in range {}-{}".format(
  *                                                                             self.minimum_intensity(), self.maximum_intensity())             # <<<<<<<<<<<<<<
  *         self.thisptr.SetIntensity(value)
  * 
  */
-      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_minimum_intensity); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 101; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_minimum_intensity); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 122; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_4);
       __pyx_t_5 = NULL;
       if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_4))) {
@@ -2384,14 +2683,14 @@ static PyObject *__pyx_pf_6native_5PyCam_18set_intensity(struct __pyx_obj_6nativ
         }
       }
       if (__pyx_t_5) {
-        __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 101; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+        __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 122; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       } else {
-        __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_t_4); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 101; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+        __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_t_4); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 122; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       }
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_maximum_intensity); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 101; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_maximum_intensity); if (unlikely(!__pyx_t_5)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 122; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_5);
       __pyx_t_7 = NULL;
       if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_5))) {
@@ -2404,10 +2703,10 @@ static PyObject *__pyx_pf_6native_5PyCam_18set_intensity(struct __pyx_obj_6nativ
         }
       }
       if (__pyx_t_7) {
-        __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_7); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 101; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+        __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_7); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 122; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
         __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       } else {
-        __pyx_t_4 = __Pyx_PyObject_CallNoArg(__pyx_t_5); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 101; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+        __pyx_t_4 = __Pyx_PyObject_CallNoArg(__pyx_t_5); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 122; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       }
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -2423,7 +2722,7 @@ static PyObject *__pyx_pf_6native_5PyCam_18set_intensity(struct __pyx_obj_6nativ
           __pyx_t_8 = 1;
         }
       }
-      __pyx_t_7 = PyTuple_New(2+__pyx_t_8); if (unlikely(!__pyx_t_7)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_7 = PyTuple_New(2+__pyx_t_8); if (unlikely(!__pyx_t_7)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_7);
       if (__pyx_t_5) {
         __Pyx_GIVEREF(__pyx_t_5); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_5); __pyx_t_5 = NULL;
@@ -2434,39 +2733,39 @@ static PyObject *__pyx_pf_6native_5PyCam_18set_intensity(struct __pyx_obj_6nativ
       PyTuple_SET_ITEM(__pyx_t_7, 1+__pyx_t_8, __pyx_t_4);
       __pyx_t_3 = 0;
       __pyx_t_4 = 0;
-      __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_7, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_7, NULL); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-      /* "native.pyx":100
+      /* "native.pyx":121
  * 
  *     def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the IR LEDs
  *         assert self.minimum_intensity() <= value <= self.maximum_intensity(), "Intensity Values for IR LEDs must be in range {}-{}".format(             # <<<<<<<<<<<<<<
  *                                                                             self.minimum_intensity(), self.maximum_intensity())
  *         self.thisptr.SetIntensity(value)
  */
-      __pyx_t_1 = PyTuple_Pack(1, __pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_1 = PyTuple_Pack(1, __pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
       PyErr_SetObject(PyExc_AssertionError, __pyx_t_1);
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      {__pyx_filename = __pyx_f[0]; __pyx_lineno = 100; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
   }
   #endif
 
-  /* "native.pyx":102
+  /* "native.pyx":123
  *         assert self.minimum_intensity() <= value <= self.maximum_intensity(), "Intensity Values for IR LEDs must be in range {}-{}".format(
  *                                                                             self.minimum_intensity(), self.maximum_intensity())
  *         self.thisptr.SetIntensity(value)             # <<<<<<<<<<<<<<
  * 
  *     def intensity(self):                                   #get camera intensity ##function is also virtual and also(maybe redefined?)in CameraRev16Child.h)
  */
-  __pyx_t_9 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 102; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_9 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 123; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetIntensity(__pyx_t_9);
 
-  /* "native.pyx":99
+  /* "native.pyx":120
  *         self.thisptr.SetRinglightEnabledWhileStopped(enable)
  * 
  *     def set_intensity(self, value):                        #set camera intensity ##Actually changes the value of the intensity for the IR LEDs             # <<<<<<<<<<<<<<
@@ -2492,7 +2791,7 @@ static PyObject *__pyx_pf_6native_5PyCam_18set_intensity(struct __pyx_obj_6nativ
   return __pyx_r;
 }
 
-/* "native.pyx":104
+/* "native.pyx":125
  *         self.thisptr.SetIntensity(value)
  * 
  *     def intensity(self):                                   #get camera intensity ##function is also virtual and also(maybe redefined?)in CameraRev16Child.h)             # <<<<<<<<<<<<<<
@@ -2522,7 +2821,7 @@ static PyObject *__pyx_pf_6native_5PyCam_20intensity(struct __pyx_obj_6native_Py
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("intensity", 0);
 
-  /* "native.pyx":105
+  /* "native.pyx":126
  * 
  *     def intensity(self):                                   #get camera intensity ##function is also virtual and also(maybe redefined?)in CameraRev16Child.h)
  *         return self.thisptr.Intensity()             # <<<<<<<<<<<<<<
@@ -2530,13 +2829,13 @@ static PyObject *__pyx_pf_6native_5PyCam_20intensity(struct __pyx_obj_6native_Py
  *     def minimum_intensity(self):                           #Returns the minimum intensity
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->Intensity()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 105; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->Intensity()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 126; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":104
+  /* "native.pyx":125
  *         self.thisptr.SetIntensity(value)
  * 
  *     def intensity(self):                                   #get camera intensity ##function is also virtual and also(maybe redefined?)in CameraRev16Child.h)             # <<<<<<<<<<<<<<
@@ -2555,7 +2854,7 @@ static PyObject *__pyx_pf_6native_5PyCam_20intensity(struct __pyx_obj_6native_Py
   return __pyx_r;
 }
 
-/* "native.pyx":107
+/* "native.pyx":128
  *         return self.thisptr.Intensity()
  * 
  *     def minimum_intensity(self):                           #Returns the minimum intensity             # <<<<<<<<<<<<<<
@@ -2585,7 +2884,7 @@ static PyObject *__pyx_pf_6native_5PyCam_22minimum_intensity(struct __pyx_obj_6n
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("minimum_intensity", 0);
 
-  /* "native.pyx":108
+  /* "native.pyx":129
  * 
  *     def minimum_intensity(self):                           #Returns the minimum intensity
  *         return self.thisptr.MinimumIntensity()             # <<<<<<<<<<<<<<
@@ -2593,13 +2892,13 @@ static PyObject *__pyx_pf_6native_5PyCam_22minimum_intensity(struct __pyx_obj_6n
  *     def maximum_intensity(self):                           #Returns the maximum intensity
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MinimumIntensity()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 108; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MinimumIntensity()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 129; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":107
+  /* "native.pyx":128
  *         return self.thisptr.Intensity()
  * 
  *     def minimum_intensity(self):                           #Returns the minimum intensity             # <<<<<<<<<<<<<<
@@ -2618,7 +2917,7 @@ static PyObject *__pyx_pf_6native_5PyCam_22minimum_intensity(struct __pyx_obj_6n
   return __pyx_r;
 }
 
-/* "native.pyx":110
+/* "native.pyx":131
  *         return self.thisptr.MinimumIntensity()
  * 
  *     def maximum_intensity(self):                           #Returns the maximum intensity             # <<<<<<<<<<<<<<
@@ -2648,7 +2947,7 @@ static PyObject *__pyx_pf_6native_5PyCam_24maximum_intensity(struct __pyx_obj_6n
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("maximum_intensity", 0);
 
-  /* "native.pyx":111
+  /* "native.pyx":132
  * 
  *     def maximum_intensity(self):                           #Returns the maximum intensity
  *         return self.thisptr.MaximumIntensity()             # <<<<<<<<<<<<<<
@@ -2656,13 +2955,13 @@ static PyObject *__pyx_pf_6native_5PyCam_24maximum_intensity(struct __pyx_obj_6n
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MaximumIntensity()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 111; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MaximumIntensity()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 132; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":110
+  /* "native.pyx":131
  *         return self.thisptr.MinimumIntensity()
  * 
  *     def maximum_intensity(self):                           #Returns the maximum intensity             # <<<<<<<<<<<<<<
@@ -2681,7 +2980,7 @@ static PyObject *__pyx_pf_6native_5PyCam_24maximum_intensity(struct __pyx_obj_6n
   return __pyx_r;
 }
 
-/* "native.pyx":114
+/* "native.pyx":135
  * 
  * 
  *     def set_exposure(self, value):                         #Set camera exposure ##In photography, shutter speed or exposure time is the length of time a camera's shutter is open when taking a photograph             # <<<<<<<<<<<<<<
@@ -2711,17 +3010,17 @@ static PyObject *__pyx_pf_6native_5PyCam_26set_exposure(struct __pyx_obj_6native
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_exposure", 0);
 
-  /* "native.pyx":115
+  /* "native.pyx":136
  * 
  *     def set_exposure(self, value):                         #Set camera exposure ##In photography, shutter speed or exposure time is the length of time a camera's shutter is open when taking a photograph
  *         self.thisptr.SetExposure(value)             # <<<<<<<<<<<<<<
  * 
  *     def exposure(self):                                    #Get Camera Exposure
  */
-  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 115; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 136; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetExposure(__pyx_t_1);
 
-  /* "native.pyx":114
+  /* "native.pyx":135
  * 
  * 
  *     def set_exposure(self, value):                         #Set camera exposure ##In photography, shutter speed or exposure time is the length of time a camera's shutter is open when taking a photograph             # <<<<<<<<<<<<<<
@@ -2741,7 +3040,7 @@ static PyObject *__pyx_pf_6native_5PyCam_26set_exposure(struct __pyx_obj_6native
   return __pyx_r;
 }
 
-/* "native.pyx":117
+/* "native.pyx":138
  *         self.thisptr.SetExposure(value)
  * 
  *     def exposure(self):                                    #Get Camera Exposure             # <<<<<<<<<<<<<<
@@ -2771,7 +3070,7 @@ static PyObject *__pyx_pf_6native_5PyCam_28exposure(struct __pyx_obj_6native_PyC
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("exposure", 0);
 
-  /* "native.pyx":118
+  /* "native.pyx":139
  * 
  *     def exposure(self):                                    #Get Camera Exposure
  *         return self.thisptr.Exposure()             # <<<<<<<<<<<<<<
@@ -2779,13 +3078,13 @@ static PyObject *__pyx_pf_6native_5PyCam_28exposure(struct __pyx_obj_6native_PyC
  *     def minimum_exposure_value(self):                      #Returns the minimum camera exposure
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->Exposure()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 118; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->Exposure()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":117
+  /* "native.pyx":138
  *         self.thisptr.SetExposure(value)
  * 
  *     def exposure(self):                                    #Get Camera Exposure             # <<<<<<<<<<<<<<
@@ -2804,7 +3103,7 @@ static PyObject *__pyx_pf_6native_5PyCam_28exposure(struct __pyx_obj_6native_PyC
   return __pyx_r;
 }
 
-/* "native.pyx":120
+/* "native.pyx":141
  *         return self.thisptr.Exposure()
  * 
  *     def minimum_exposure_value(self):                      #Returns the minimum camera exposure             # <<<<<<<<<<<<<<
@@ -2834,7 +3133,7 @@ static PyObject *__pyx_pf_6native_5PyCam_30minimum_exposure_value(struct __pyx_o
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("minimum_exposure_value", 0);
 
-  /* "native.pyx":121
+  /* "native.pyx":142
  * 
  *     def minimum_exposure_value(self):                      #Returns the minimum camera exposure
  *         return self.thisptr.MinimumExposureValue()             # <<<<<<<<<<<<<<
@@ -2842,13 +3141,13 @@ static PyObject *__pyx_pf_6native_5PyCam_30minimum_exposure_value(struct __pyx_o
  *     def maximum_exposure_value(self):                      #Returns the maximum camera exposure
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MinimumExposureValue()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 121; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MinimumExposureValue()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":120
+  /* "native.pyx":141
  *         return self.thisptr.Exposure()
  * 
  *     def minimum_exposure_value(self):                      #Returns the minimum camera exposure             # <<<<<<<<<<<<<<
@@ -2867,7 +3166,7 @@ static PyObject *__pyx_pf_6native_5PyCam_30minimum_exposure_value(struct __pyx_o
   return __pyx_r;
 }
 
-/* "native.pyx":123
+/* "native.pyx":144
  *         return self.thisptr.MinimumExposureValue()
  * 
  *     def maximum_exposure_value(self):                      #Returns the maximum camera exposure             # <<<<<<<<<<<<<<
@@ -2897,7 +3196,7 @@ static PyObject *__pyx_pf_6native_5PyCam_32maximum_exposure_value(struct __pyx_o
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("maximum_exposure_value", 0);
 
-  /* "native.pyx":124
+  /* "native.pyx":145
  * 
  *     def maximum_exposure_value(self):                      #Returns the maximum camera exposure
  *         return self.thisptr.MaximumExposureValue()             # <<<<<<<<<<<<<<
@@ -2905,13 +3204,13 @@ static PyObject *__pyx_pf_6native_5PyCam_32maximum_exposure_value(struct __pyx_o
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MaximumExposureValue()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 124; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MaximumExposureValue()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 145; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":123
+  /* "native.pyx":144
  *         return self.thisptr.MinimumExposureValue()
  * 
  *     def maximum_exposure_value(self):                      #Returns the maximum camera exposure             # <<<<<<<<<<<<<<
@@ -2930,7 +3229,7 @@ static PyObject *__pyx_pf_6native_5PyCam_32maximum_exposure_value(struct __pyx_o
   return __pyx_r;
 }
 
-/* "native.pyx":127
+/* "native.pyx":148
  * 
  * 
  *     def set_frame_rate(self, value):                       #set camera frame rate (##function is also virtual). For Ethernet devices as well as the OptiTrack Flex 13, when calling SetFrameRate(), the value is the desired frame rate.             # <<<<<<<<<<<<<<
@@ -2960,17 +3259,17 @@ static PyObject *__pyx_pf_6native_5PyCam_34set_frame_rate(struct __pyx_obj_6nati
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_frame_rate", 0);
 
-  /* "native.pyx":128
+  /* "native.pyx":149
  * 
  *     def set_frame_rate(self, value):                       #set camera frame rate (##function is also virtual). For Ethernet devices as well as the OptiTrack Flex 13, when calling SetFrameRate(), the value is the desired frame rate.
  *         self.thisptr.SetFrameRate(value)             # <<<<<<<<<<<<<<
  * 
  *     def frame_rate(self):                                  #get camera frame rate (##function is also virtual)
  */
-  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 128; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 149; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetFrameRate(__pyx_t_1);
 
-  /* "native.pyx":127
+  /* "native.pyx":148
  * 
  * 
  *     def set_frame_rate(self, value):                       #set camera frame rate (##function is also virtual). For Ethernet devices as well as the OptiTrack Flex 13, when calling SetFrameRate(), the value is the desired frame rate.             # <<<<<<<<<<<<<<
@@ -2990,7 +3289,7 @@ static PyObject *__pyx_pf_6native_5PyCam_34set_frame_rate(struct __pyx_obj_6nati
   return __pyx_r;
 }
 
-/* "native.pyx":130
+/* "native.pyx":151
  *         self.thisptr.SetFrameRate(value)
  * 
  *     def frame_rate(self):                                  #get camera frame rate (##function is also virtual)             # <<<<<<<<<<<<<<
@@ -3020,7 +3319,7 @@ static PyObject *__pyx_pf_6native_5PyCam_36frame_rate(struct __pyx_obj_6native_P
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("frame_rate", 0);
 
-  /* "native.pyx":131
+  /* "native.pyx":152
  * 
  *     def frame_rate(self):                                  #get camera frame rate (##function is also virtual)
  *         return self.thisptr.FrameRate()             # <<<<<<<<<<<<<<
@@ -3028,13 +3327,13 @@ static PyObject *__pyx_pf_6native_5PyCam_36frame_rate(struct __pyx_obj_6native_P
  *     def set_frame_decimation(self, value):                 #set camera frame decimation ##Frame decimation reduces the number of input frames to increase pose and structure robustness in Structure and Motion (SaM) applications
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->FrameRate()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 131; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->FrameRate()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 152; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":130
+  /* "native.pyx":151
  *         self.thisptr.SetFrameRate(value)
  * 
  *     def frame_rate(self):                                  #get camera frame rate (##function is also virtual)             # <<<<<<<<<<<<<<
@@ -3053,7 +3352,7 @@ static PyObject *__pyx_pf_6native_5PyCam_36frame_rate(struct __pyx_obj_6native_P
   return __pyx_r;
 }
 
-/* "native.pyx":133
+/* "native.pyx":154
  *         return self.thisptr.FrameRate()
  * 
  *     def set_frame_decimation(self, value):                 #set camera frame decimation ##Frame decimation reduces the number of input frames to increase pose and structure robustness in Structure and Motion (SaM) applications             # <<<<<<<<<<<<<<
@@ -3083,17 +3382,17 @@ static PyObject *__pyx_pf_6native_5PyCam_38set_frame_decimation(struct __pyx_obj
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_frame_decimation", 0);
 
-  /* "native.pyx":134
+  /* "native.pyx":155
  * 
  *     def set_frame_decimation(self, value):                 #set camera frame decimation ##Frame decimation reduces the number of input frames to increase pose and structure robustness in Structure and Motion (SaM) applications
  *         self.thisptr.SetFrameDecimation(value)             # <<<<<<<<<<<<<<
  * 
  *     def frame_decimation(self):                            #Get Camera Frame Decimation (##function is also virtual)
  */
-  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 155; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetFrameDecimation(__pyx_t_1);
 
-  /* "native.pyx":133
+  /* "native.pyx":154
  *         return self.thisptr.FrameRate()
  * 
  *     def set_frame_decimation(self, value):                 #set camera frame decimation ##Frame decimation reduces the number of input frames to increase pose and structure robustness in Structure and Motion (SaM) applications             # <<<<<<<<<<<<<<
@@ -3113,7 +3412,7 @@ static PyObject *__pyx_pf_6native_5PyCam_38set_frame_decimation(struct __pyx_obj
   return __pyx_r;
 }
 
-/* "native.pyx":136
+/* "native.pyx":157
  *         self.thisptr.SetFrameDecimation(value)
  * 
  *     def frame_decimation(self):                            #Get Camera Frame Decimation (##function is also virtual)             # <<<<<<<<<<<<<<
@@ -3143,7 +3442,7 @@ static PyObject *__pyx_pf_6native_5PyCam_40frame_decimation(struct __pyx_obj_6na
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("frame_decimation", 0);
 
-  /* "native.pyx":137
+  /* "native.pyx":158
  * 
  *     def frame_decimation(self):                            #Get Camera Frame Decimation (##function is also virtual)
  *         return self.thisptr.FrameDecimation()             # <<<<<<<<<<<<<<
@@ -3151,13 +3450,13 @@ static PyObject *__pyx_pf_6native_5PyCam_40frame_decimation(struct __pyx_obj_6na
  *     def actual_frame_rate(self):                           #Current camera frame rate (frames/sec) ##function is also virtual
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->FrameDecimation()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->FrameDecimation()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 158; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":136
+  /* "native.pyx":157
  *         self.thisptr.SetFrameDecimation(value)
  * 
  *     def frame_decimation(self):                            #Get Camera Frame Decimation (##function is also virtual)             # <<<<<<<<<<<<<<
@@ -3176,7 +3475,7 @@ static PyObject *__pyx_pf_6native_5PyCam_40frame_decimation(struct __pyx_obj_6na
   return __pyx_r;
 }
 
-/* "native.pyx":139
+/* "native.pyx":160
  *         return self.thisptr.FrameDecimation()
  * 
  *     def actual_frame_rate(self):                           #Current camera frame rate (frames/sec) ##function is also virtual             # <<<<<<<<<<<<<<
@@ -3206,7 +3505,7 @@ static PyObject *__pyx_pf_6native_5PyCam_42actual_frame_rate(struct __pyx_obj_6n
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("actual_frame_rate", 0);
 
-  /* "native.pyx":140
+  /* "native.pyx":161
  * 
  *     def actual_frame_rate(self):                           #Current camera frame rate (frames/sec) ##function is also virtual
  *         return self.thisptr.ActualFrameRate()             # <<<<<<<<<<<<<<
@@ -3214,13 +3513,13 @@ static PyObject *__pyx_pf_6native_5PyCam_42actual_frame_rate(struct __pyx_obj_6n
  *     def minimum_frame_rate_value(self):                    #returns the minimum frame rate ##function is also virtual
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_void_to_None(__pyx_v_self->thisptr->ActualFrameRate()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 140; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_void_to_None(__pyx_v_self->thisptr->ActualFrameRate()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 161; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":139
+  /* "native.pyx":160
  *         return self.thisptr.FrameDecimation()
  * 
  *     def actual_frame_rate(self):                           #Current camera frame rate (frames/sec) ##function is also virtual             # <<<<<<<<<<<<<<
@@ -3239,7 +3538,7 @@ static PyObject *__pyx_pf_6native_5PyCam_42actual_frame_rate(struct __pyx_obj_6n
   return __pyx_r;
 }
 
-/* "native.pyx":142
+/* "native.pyx":163
  *         return self.thisptr.ActualFrameRate()
  * 
  *     def minimum_frame_rate_value(self):                    #returns the minimum frame rate ##function is also virtual             # <<<<<<<<<<<<<<
@@ -3269,7 +3568,7 @@ static PyObject *__pyx_pf_6native_5PyCam_44minimum_frame_rate_value(struct __pyx
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("minimum_frame_rate_value", 0);
 
-  /* "native.pyx":143
+  /* "native.pyx":164
  * 
  *     def minimum_frame_rate_value(self):                    #returns the minimum frame rate ##function is also virtual
  *         return self.thisptr.MinimumFrameRateValue()             # <<<<<<<<<<<<<<
@@ -3277,13 +3576,13 @@ static PyObject *__pyx_pf_6native_5PyCam_44minimum_frame_rate_value(struct __pyx
  *     def maximum_frame_rate_value(self):                    #returns the maximum frame rate ##function is also virtual
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MinimumFrameRateValue()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MinimumFrameRateValue()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 164; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":142
+  /* "native.pyx":163
  *         return self.thisptr.ActualFrameRate()
  * 
  *     def minimum_frame_rate_value(self):                    #returns the minimum frame rate ##function is also virtual             # <<<<<<<<<<<<<<
@@ -3302,7 +3601,7 @@ static PyObject *__pyx_pf_6native_5PyCam_44minimum_frame_rate_value(struct __pyx
   return __pyx_r;
 }
 
-/* "native.pyx":145
+/* "native.pyx":166
  *         return self.thisptr.MinimumFrameRateValue()
  * 
  *     def maximum_frame_rate_value(self):                    #returns the maximum frame rate ##function is also virtual             # <<<<<<<<<<<<<<
@@ -3332,7 +3631,7 @@ static PyObject *__pyx_pf_6native_5PyCam_46maximum_frame_rate_value(struct __pyx
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("maximum_frame_rate_value", 0);
 
-  /* "native.pyx":146
+  /* "native.pyx":167
  * 
  *     def maximum_frame_rate_value(self):                    #returns the maximum frame rate ##function is also virtual
  *         return self.thisptr.MaximumFrameRateValue()             # <<<<<<<<<<<<<<
@@ -3340,13 +3639,13 @@ static PyObject *__pyx_pf_6native_5PyCam_46maximum_frame_rate_value(struct __pyx
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MaximumFrameRateValue()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MaximumFrameRateValue()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 167; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":145
+  /* "native.pyx":166
  *         return self.thisptr.MinimumFrameRateValue()
  * 
  *     def maximum_frame_rate_value(self):                    #returns the maximum frame rate ##function is also virtual             # <<<<<<<<<<<<<<
@@ -3365,7 +3664,7 @@ static PyObject *__pyx_pf_6native_5PyCam_46maximum_frame_rate_value(struct __pyx
   return __pyx_r;
 }
 
-/* "native.pyx":149
+/* "native.pyx":170
  * 
  * 
  *     def set_ir_filter(self, enabled):                      #Enable/Disable IR Bandpass Filter ##function is also virtual             # <<<<<<<<<<<<<<
@@ -3399,7 +3698,7 @@ static PyObject *__pyx_pf_6native_5PyCam_48set_ir_filter(struct __pyx_obj_6nativ
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_ir_filter", 0);
 
-  /* "native.pyx":150
+  /* "native.pyx":171
  * 
  *     def set_ir_filter(self, enabled):                      #Enable/Disable IR Bandpass Filter ##function is also virtual
  *         assert self.is_filter_switch_available(), "This camera has no filter switch. You cannot set the IR filter!"             # <<<<<<<<<<<<<<
@@ -3408,7 +3707,7 @@ static PyObject *__pyx_pf_6native_5PyCam_48set_ir_filter(struct __pyx_obj_6nativ
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(!Py_OptimizeFlag)) {
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_is_filter_switch_available); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 150; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_is_filter_switch_available); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 171; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_t_3 = NULL;
     if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
@@ -3421,33 +3720,33 @@ static PyObject *__pyx_pf_6native_5PyCam_48set_ir_filter(struct __pyx_obj_6nativ
       }
     }
     if (__pyx_t_3) {
-      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 150; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 171; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     } else {
-      __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 150; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 171; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 150; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 171; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(!__pyx_t_4)) {
       PyErr_SetObject(PyExc_AssertionError, __pyx_kp_s_This_camera_has_no_filter_switch);
-      {__pyx_filename = __pyx_f[0]; __pyx_lineno = 150; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      {__pyx_filename = __pyx_f[0]; __pyx_lineno = 171; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
   }
   #endif
 
-  /* "native.pyx":151
+  /* "native.pyx":172
  *     def set_ir_filter(self, enabled):                      #Enable/Disable IR Bandpass Filter ##function is also virtual
  *         assert self.is_filter_switch_available(), "This camera has no filter switch. You cannot set the IR filter!"
  *         self.thisptr.SetIRFilter(enabled)             # <<<<<<<<<<<<<<
  * 
  *     def ir_filter(self):                                   ##probably returns state of IR filter above (function is also virtual)
  */
-  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_enabled); if (unlikely((__pyx_t_5 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 151; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_enabled); if (unlikely((__pyx_t_5 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 172; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetIRFilter(__pyx_t_5);
 
-  /* "native.pyx":149
+  /* "native.pyx":170
  * 
  * 
  *     def set_ir_filter(self, enabled):                      #Enable/Disable IR Bandpass Filter ##function is also virtual             # <<<<<<<<<<<<<<
@@ -3470,7 +3769,7 @@ static PyObject *__pyx_pf_6native_5PyCam_48set_ir_filter(struct __pyx_obj_6nativ
   return __pyx_r;
 }
 
-/* "native.pyx":153
+/* "native.pyx":174
  *         self.thisptr.SetIRFilter(enabled)
  * 
  *     def ir_filter(self):                                   ##probably returns state of IR filter above (function is also virtual)             # <<<<<<<<<<<<<<
@@ -3500,7 +3799,7 @@ static PyObject *__pyx_pf_6native_5PyCam_50ir_filter(struct __pyx_obj_6native_Py
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("ir_filter", 0);
 
-  /* "native.pyx":154
+  /* "native.pyx":175
  * 
  *     def ir_filter(self):                                   ##probably returns state of IR filter above (function is also virtual)
  *         return self.thisptr.IRFilter()             # <<<<<<<<<<<<<<
@@ -3508,13 +3807,13 @@ static PyObject *__pyx_pf_6native_5PyCam_50ir_filter(struct __pyx_obj_6native_Py
  *     def is_filter_switch_available(self):                  ##returns false as implemented in camera.h but is virtual and probably camera dependent
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->IRFilter()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 154; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->IRFilter()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 175; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":153
+  /* "native.pyx":174
  *         self.thisptr.SetIRFilter(enabled)
  * 
  *     def ir_filter(self):                                   ##probably returns state of IR filter above (function is also virtual)             # <<<<<<<<<<<<<<
@@ -3533,7 +3832,7 @@ static PyObject *__pyx_pf_6native_5PyCam_50ir_filter(struct __pyx_obj_6native_Py
   return __pyx_r;
 }
 
-/* "native.pyx":156
+/* "native.pyx":177
  *         return self.thisptr.IRFilter()
  * 
  *     def is_filter_switch_available(self):                  ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
@@ -3563,7 +3862,7 @@ static PyObject *__pyx_pf_6native_5PyCam_52is_filter_switch_available(struct __p
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("is_filter_switch_available", 0);
 
-  /* "native.pyx":157
+  /* "native.pyx":178
  * 
  *     def is_filter_switch_available(self):                  ##returns false as implemented in camera.h but is virtual and probably camera dependent
  *         return self.thisptr.IsFilterSwitchAvailable()             # <<<<<<<<<<<<<<
@@ -3571,13 +3870,13 @@ static PyObject *__pyx_pf_6native_5PyCam_52is_filter_switch_available(struct __p
  *     def set_strobe_offset(self, value):                    #Set IR Illumination Delay ##(virtual) strobe and illumination delay? So switch the chip on and off? why?
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->IsFilterSwitchAvailable()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 157; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->IsFilterSwitchAvailable()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 178; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":156
+  /* "native.pyx":177
  *         return self.thisptr.IRFilter()
  * 
  *     def is_filter_switch_available(self):                  ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
@@ -3596,7 +3895,7 @@ static PyObject *__pyx_pf_6native_5PyCam_52is_filter_switch_available(struct __p
   return __pyx_r;
 }
 
-/* "native.pyx":159
+/* "native.pyx":180
  *         return self.thisptr.IsFilterSwitchAvailable()
  * 
  *     def set_strobe_offset(self, value):                    #Set IR Illumination Delay ##(virtual) strobe and illumination delay? So switch the chip on and off? why?             # <<<<<<<<<<<<<<
@@ -3626,17 +3925,17 @@ static PyObject *__pyx_pf_6native_5PyCam_54set_strobe_offset(struct __pyx_obj_6n
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_strobe_offset", 0);
 
-  /* "native.pyx":160
+  /* "native.pyx":181
  * 
  *     def set_strobe_offset(self, value):                    #Set IR Illumination Delay ##(virtual) strobe and illumination delay? So switch the chip on and off? why?
  *         self.thisptr.SetStrobeOffset(value)             # <<<<<<<<<<<<<<
  * 
  *     def strobe_offset(self):                               #Get IR Illumination Delay ##virtual
  */
-  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 160; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 181; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetStrobeOffset(__pyx_t_1);
 
-  /* "native.pyx":159
+  /* "native.pyx":180
  *         return self.thisptr.IsFilterSwitchAvailable()
  * 
  *     def set_strobe_offset(self, value):                    #Set IR Illumination Delay ##(virtual) strobe and illumination delay? So switch the chip on and off? why?             # <<<<<<<<<<<<<<
@@ -3656,7 +3955,7 @@ static PyObject *__pyx_pf_6native_5PyCam_54set_strobe_offset(struct __pyx_obj_6n
   return __pyx_r;
 }
 
-/* "native.pyx":162
+/* "native.pyx":183
  *         self.thisptr.SetStrobeOffset(value)
  * 
  *     def strobe_offset(self):                               #Get IR Illumination Delay ##virtual             # <<<<<<<<<<<<<<
@@ -3686,7 +3985,7 @@ static PyObject *__pyx_pf_6native_5PyCam_56strobe_offset(struct __pyx_obj_6nativ
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("strobe_offset", 0);
 
-  /* "native.pyx":163
+  /* "native.pyx":184
  * 
  *     def strobe_offset(self):                               #Get IR Illumination Delay ##virtual
  *         return self.thisptr.StrobeOffset()             # <<<<<<<<<<<<<<
@@ -3694,13 +3993,13 @@ static PyObject *__pyx_pf_6native_5PyCam_56strobe_offset(struct __pyx_obj_6nativ
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->StrobeOffset()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 163; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->StrobeOffset()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 184; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":162
+  /* "native.pyx":183
  *         self.thisptr.SetStrobeOffset(value)
  * 
  *     def strobe_offset(self):                               #Get IR Illumination Delay ##virtual             # <<<<<<<<<<<<<<
@@ -3719,7 +4018,7 @@ static PyObject *__pyx_pf_6native_5PyCam_56strobe_offset(struct __pyx_obj_6nativ
   return __pyx_r;
 }
 
-/* "native.pyx":166
+/* "native.pyx":187
  * 
  * 
  *     def set_agc(self, enable):                             #Enable/Disable Imager AGC ##The AutomaticGainControl increases the intensifier gain if the video scene is too dim and decreases the gain if the video scene is too bright             # <<<<<<<<<<<<<<
@@ -3753,7 +4052,7 @@ static PyObject *__pyx_pf_6native_5PyCam_58set_agc(struct __pyx_obj_6native_PyCa
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_agc", 0);
 
-  /* "native.pyx":167
+  /* "native.pyx":188
  * 
  *     def set_agc(self, enable):                             #Enable/Disable Imager AGC ##The AutomaticGainControl increases the intensifier gain if the video scene is too dim and decreases the gain if the video scene is too bright
  *         assert self.is_agc_available(), "Cannot set AGC (Automatic Gain Control) for this camera, as is not available."             # <<<<<<<<<<<<<<
@@ -3762,7 +4061,7 @@ static PyObject *__pyx_pf_6native_5PyCam_58set_agc(struct __pyx_obj_6native_PyCa
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(!Py_OptimizeFlag)) {
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_is_agc_available); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 167; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_is_agc_available); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_2);
     __pyx_t_3 = NULL;
     if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
@@ -3775,33 +4074,33 @@ static PyObject *__pyx_pf_6native_5PyCam_58set_agc(struct __pyx_obj_6native_PyCa
       }
     }
     if (__pyx_t_3) {
-      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 167; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     } else {
-      __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 167; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 167; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (unlikely(!__pyx_t_4)) {
       PyErr_SetObject(PyExc_AssertionError, __pyx_kp_s_Cannot_set_AGC_Automatic_Gain_Co);
-      {__pyx_filename = __pyx_f[0]; __pyx_lineno = 167; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
   }
   #endif
 
-  /* "native.pyx":168
+  /* "native.pyx":189
  *     def set_agc(self, enable):                             #Enable/Disable Imager AGC ##The AutomaticGainControl increases the intensifier gain if the video scene is too dim and decreases the gain if the video scene is too bright
  *         assert self.is_agc_available(), "Cannot set AGC (Automatic Gain Control) for this camera, as is not available."
  *         self.thisptr.SetAGC(enable)             # <<<<<<<<<<<<<<
  * 
  *     def agc(self):                                         ##probably returns if AGC is on or off (see above)
  */
-  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_5 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 168; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_5 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 189; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetAGC(__pyx_t_5);
 
-  /* "native.pyx":166
+  /* "native.pyx":187
  * 
  * 
  *     def set_agc(self, enable):                             #Enable/Disable Imager AGC ##The AutomaticGainControl increases the intensifier gain if the video scene is too dim and decreases the gain if the video scene is too bright             # <<<<<<<<<<<<<<
@@ -3824,7 +4123,7 @@ static PyObject *__pyx_pf_6native_5PyCam_58set_agc(struct __pyx_obj_6native_PyCa
   return __pyx_r;
 }
 
-/* "native.pyx":170
+/* "native.pyx":191
  *         self.thisptr.SetAGC(enable)
  * 
  *     def agc(self):                                         ##probably returns if AGC is on or off (see above)             # <<<<<<<<<<<<<<
@@ -3854,7 +4153,7 @@ static PyObject *__pyx_pf_6native_5PyCam_60agc(struct __pyx_obj_6native_PyCam *_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("agc", 0);
 
-  /* "native.pyx":171
+  /* "native.pyx":192
  * 
  *     def agc(self):                                         ##probably returns if AGC is on or off (see above)
  *         return self.thisptr.AGC()             # <<<<<<<<<<<<<<
@@ -3862,13 +4161,13 @@ static PyObject *__pyx_pf_6native_5PyCam_60agc(struct __pyx_obj_6native_PyCam *_
  *     def is_agc_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->AGC()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 171; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->AGC()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 192; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":170
+  /* "native.pyx":191
  *         self.thisptr.SetAGC(enable)
  * 
  *     def agc(self):                                         ##probably returns if AGC is on or off (see above)             # <<<<<<<<<<<<<<
@@ -3887,7 +4186,7 @@ static PyObject *__pyx_pf_6native_5PyCam_60agc(struct __pyx_obj_6native_PyCam *_
   return __pyx_r;
 }
 
-/* "native.pyx":173
+/* "native.pyx":194
  *         return self.thisptr.AGC()
  * 
  *     def is_agc_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
@@ -3917,7 +4216,7 @@ static PyObject *__pyx_pf_6native_5PyCam_62is_agc_available(struct __pyx_obj_6na
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("is_agc_available", 0);
 
-  /* "native.pyx":174
+  /* "native.pyx":195
  * 
  *     def is_agc_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent
  *         return self.thisptr.IsAGCAvailable()             # <<<<<<<<<<<<<<
@@ -3925,13 +4224,13 @@ static PyObject *__pyx_pf_6native_5PyCam_62is_agc_available(struct __pyx_obj_6na
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->IsAGCAvailable()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 174; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->IsAGCAvailable()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 195; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":173
+  /* "native.pyx":194
  *         return self.thisptr.AGC()
  * 
  *     def is_agc_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
@@ -3950,7 +4249,7 @@ static PyObject *__pyx_pf_6native_5PyCam_62is_agc_available(struct __pyx_obj_6na
   return __pyx_r;
 }
 
-/* "native.pyx":177
+/* "native.pyx":198
  * 
  * 
  *     def set_aec(self, enable):                             #Enable/Disable Imager AEC ##automatic exposure control             # <<<<<<<<<<<<<<
@@ -3980,17 +4279,17 @@ static PyObject *__pyx_pf_6native_5PyCam_64set_aec(struct __pyx_obj_6native_PyCa
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_aec", 0);
 
-  /* "native.pyx":178
+  /* "native.pyx":199
  * 
  *     def set_aec(self, enable):                             #Enable/Disable Imager AEC ##automatic exposure control
  *         self.thisptr.SetAEC(enable)             # <<<<<<<<<<<<<<
  * 
  *     def aec(self):                                         ##returns if AEC is on or off (see above)
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 178; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_enable); if (unlikely((__pyx_t_1 == (bool)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 199; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetAEC(__pyx_t_1);
 
-  /* "native.pyx":177
+  /* "native.pyx":198
  * 
  * 
  *     def set_aec(self, enable):                             #Enable/Disable Imager AEC ##automatic exposure control             # <<<<<<<<<<<<<<
@@ -4010,7 +4309,7 @@ static PyObject *__pyx_pf_6native_5PyCam_64set_aec(struct __pyx_obj_6native_PyCa
   return __pyx_r;
 }
 
-/* "native.pyx":180
+/* "native.pyx":201
  *         self.thisptr.SetAEC(enable)
  * 
  *     def aec(self):                                         ##returns if AEC is on or off (see above)             # <<<<<<<<<<<<<<
@@ -4040,7 +4339,7 @@ static PyObject *__pyx_pf_6native_5PyCam_66aec(struct __pyx_obj_6native_PyCam *_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("aec", 0);
 
-  /* "native.pyx":181
+  /* "native.pyx":202
  * 
  *     def aec(self):                                         ##returns if AEC is on or off (see above)
  *         return self.thisptr.AEC()             # <<<<<<<<<<<<<<
@@ -4048,13 +4347,13 @@ static PyObject *__pyx_pf_6native_5PyCam_66aec(struct __pyx_obj_6native_PyCam *_
  *     def is_aec_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->AEC()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 181; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->AEC()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 202; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":180
+  /* "native.pyx":201
  *         self.thisptr.SetAEC(enable)
  * 
  *     def aec(self):                                         ##returns if AEC is on or off (see above)             # <<<<<<<<<<<<<<
@@ -4073,7 +4372,7 @@ static PyObject *__pyx_pf_6native_5PyCam_66aec(struct __pyx_obj_6native_PyCam *_
   return __pyx_r;
 }
 
-/* "native.pyx":183
+/* "native.pyx":204
  *         return self.thisptr.AEC()
  * 
  *     def is_aec_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
@@ -4103,7 +4402,7 @@ static PyObject *__pyx_pf_6native_5PyCam_68is_aec_available(struct __pyx_obj_6na
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("is_aec_available", 0);
 
-  /* "native.pyx":184
+  /* "native.pyx":205
  * 
  *     def is_aec_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent
  *         return self.thisptr.IsAECAvailable()             # <<<<<<<<<<<<<<
@@ -4111,13 +4410,13 @@ static PyObject *__pyx_pf_6native_5PyCam_68is_aec_available(struct __pyx_obj_6na
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->IsAECAvailable()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 184; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->IsAECAvailable()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 205; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":183
+  /* "native.pyx":204
  *         return self.thisptr.AEC()
  * 
  *     def is_aec_available(self):                            ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
@@ -4136,7 +4435,7 @@ static PyObject *__pyx_pf_6native_5PyCam_68is_aec_available(struct __pyx_obj_6na
   return __pyx_r;
 }
 
-/* "native.pyx":187
+/* "native.pyx":208
  * 
  * 
  *     def set_threshold(self, value):                        #Set Camera Threshold ##the intensity after which a pixel shows a signal ?             # <<<<<<<<<<<<<<
@@ -4166,17 +4465,17 @@ static PyObject *__pyx_pf_6native_5PyCam_70set_threshold(struct __pyx_obj_6nativ
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_threshold", 0);
 
-  /* "native.pyx":188
+  /* "native.pyx":209
  * 
  *     def set_threshold(self, value):                        #Set Camera Threshold ##the intensity after which a pixel shows a signal ?
  *         self.thisptr.SetThreshold(value)             # <<<<<<<<<<<<<<
  * 
  *     def threshold(self):                                   #Get Camera Threshold
  */
-  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 188; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 209; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetThreshold(__pyx_t_1);
 
-  /* "native.pyx":187
+  /* "native.pyx":208
  * 
  * 
  *     def set_threshold(self, value):                        #Set Camera Threshold ##the intensity after which a pixel shows a signal ?             # <<<<<<<<<<<<<<
@@ -4196,7 +4495,7 @@ static PyObject *__pyx_pf_6native_5PyCam_70set_threshold(struct __pyx_obj_6nativ
   return __pyx_r;
 }
 
-/* "native.pyx":190
+/* "native.pyx":211
  *         self.thisptr.SetThreshold(value)
  * 
  *     def threshold(self):                                   #Get Camera Threshold             # <<<<<<<<<<<<<<
@@ -4226,7 +4525,7 @@ static PyObject *__pyx_pf_6native_5PyCam_72threshold(struct __pyx_obj_6native_Py
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("threshold", 0);
 
-  /* "native.pyx":191
+  /* "native.pyx":212
  * 
  *     def threshold(self):                                   #Get Camera Threshold
  *         return self.thisptr.Threshold()             # <<<<<<<<<<<<<<
@@ -4234,13 +4533,13 @@ static PyObject *__pyx_pf_6native_5PyCam_72threshold(struct __pyx_obj_6native_Py
  *     def minimum_threshold(self):                           #Returns the minimum threshold ##virtual
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->Threshold()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 191; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->Threshold()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 212; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":190
+  /* "native.pyx":211
  *         self.thisptr.SetThreshold(value)
  * 
  *     def threshold(self):                                   #Get Camera Threshold             # <<<<<<<<<<<<<<
@@ -4259,7 +4558,7 @@ static PyObject *__pyx_pf_6native_5PyCam_72threshold(struct __pyx_obj_6native_Py
   return __pyx_r;
 }
 
-/* "native.pyx":193
+/* "native.pyx":214
  *         return self.thisptr.Threshold()
  * 
  *     def minimum_threshold(self):                           #Returns the minimum threshold ##virtual             # <<<<<<<<<<<<<<
@@ -4289,7 +4588,7 @@ static PyObject *__pyx_pf_6native_5PyCam_74minimum_threshold(struct __pyx_obj_6n
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("minimum_threshold", 0);
 
-  /* "native.pyx":194
+  /* "native.pyx":215
  * 
  *     def minimum_threshold(self):                           #Returns the minimum threshold ##virtual
  *         return self.thisptr.MinimumThreshold()             # <<<<<<<<<<<<<<
@@ -4297,13 +4596,13 @@ static PyObject *__pyx_pf_6native_5PyCam_74minimum_threshold(struct __pyx_obj_6n
  *     def maximum_threshold(self):                           #Returns the maximum threshold ##virtual
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MinimumThreshold()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 194; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MinimumThreshold()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 215; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":193
+  /* "native.pyx":214
  *         return self.thisptr.Threshold()
  * 
  *     def minimum_threshold(self):                           #Returns the minimum threshold ##virtual             # <<<<<<<<<<<<<<
@@ -4322,7 +4621,7 @@ static PyObject *__pyx_pf_6native_5PyCam_74minimum_threshold(struct __pyx_obj_6n
   return __pyx_r;
 }
 
-/* "native.pyx":196
+/* "native.pyx":217
  *         return self.thisptr.MinimumThreshold()
  * 
  *     def maximum_threshold(self):                           #Returns the maximum threshold ##virtual             # <<<<<<<<<<<<<<
@@ -4352,7 +4651,7 @@ static PyObject *__pyx_pf_6native_5PyCam_76maximum_threshold(struct __pyx_obj_6n
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("maximum_threshold", 0);
 
-  /* "native.pyx":197
+  /* "native.pyx":218
  * 
  *     def maximum_threshold(self):                           #Returns the maximum threshold ##virtual
  *         return self.thisptr.MaximumThreshold()             # <<<<<<<<<<<<<<
@@ -4360,13 +4659,13 @@ static PyObject *__pyx_pf_6native_5PyCam_76maximum_threshold(struct __pyx_obj_6n
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MaximumThreshold()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 197; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->MaximumThreshold()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 218; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":196
+  /* "native.pyx":217
  *         return self.thisptr.MinimumThreshold()
  * 
  *     def maximum_threshold(self):                           #Returns the maximum threshold ##virtual             # <<<<<<<<<<<<<<
@@ -4385,7 +4684,7 @@ static PyObject *__pyx_pf_6native_5PyCam_76maximum_threshold(struct __pyx_obj_6n
   return __pyx_r;
 }
 
-/* "native.pyx":200
+/* "native.pyx":221
  * 
  * 
  *     def set_precision_cap(self,value):                     #Set Precision Packet Size Cap ##?             # <<<<<<<<<<<<<<
@@ -4415,17 +4714,17 @@ static PyObject *__pyx_pf_6native_5PyCam_78set_precision_cap(struct __pyx_obj_6n
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_precision_cap", 0);
 
-  /* "native.pyx":201
+  /* "native.pyx":222
  * 
  *     def set_precision_cap(self,value):                     #Set Precision Packet Size Cap ##?
  *         self.thisptr.SetPrecisionCap(value)             # <<<<<<<<<<<<<<
  * 
  *     def precision_cap(self):                               #Get Precision Cap
  */
-  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 201; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_As_int(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 222; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetPrecisionCap(__pyx_t_1);
 
-  /* "native.pyx":200
+  /* "native.pyx":221
  * 
  * 
  *     def set_precision_cap(self,value):                     #Set Precision Packet Size Cap ##?             # <<<<<<<<<<<<<<
@@ -4445,7 +4744,7 @@ static PyObject *__pyx_pf_6native_5PyCam_78set_precision_cap(struct __pyx_obj_6n
   return __pyx_r;
 }
 
-/* "native.pyx":203
+/* "native.pyx":224
  *         self.thisptr.SetPrecisionCap(value)
  * 
  *     def precision_cap(self):                               #Get Precision Cap             # <<<<<<<<<<<<<<
@@ -4475,7 +4774,7 @@ static PyObject *__pyx_pf_6native_5PyCam_80precision_cap(struct __pyx_obj_6nativ
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("precision_cap", 0);
 
-  /* "native.pyx":204
+  /* "native.pyx":225
  * 
  *     def precision_cap(self):                               #Get Precision Cap
  *         return self.thisptr.PrecisionCap()             # <<<<<<<<<<<<<<
@@ -4483,13 +4782,13 @@ static PyObject *__pyx_pf_6native_5PyCam_80precision_cap(struct __pyx_obj_6nativ
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->PrecisionCap()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 204; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->PrecisionCap()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 225; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":203
+  /* "native.pyx":224
  *         self.thisptr.SetPrecisionCap(value)
  * 
  *     def precision_cap(self):                               #Get Precision Cap             # <<<<<<<<<<<<<<
@@ -4508,7 +4807,7 @@ static PyObject *__pyx_pf_6native_5PyCam_80precision_cap(struct __pyx_obj_6nativ
   return __pyx_r;
 }
 
-/* "native.pyx":207
+/* "native.pyx":228
  * 
  * 
  *     def set_imager_gain(self, imager_gain):                #Image gain ##gain in a digital imaging device represents the relationship between the number of electrons acquired on an image sensor and the analog-to-digital units (ADUs) that are generated, representing the image signal. Increasing the gain amplifies the signal by increasing the ratio of ADUs to electrons acquired on the sensor. The result is that increasing gain increases the apparent brightness of an image at a given exposure             # <<<<<<<<<<<<<<
@@ -4538,17 +4837,17 @@ static PyObject *__pyx_pf_6native_5PyCam_82set_imager_gain(struct __pyx_obj_6nat
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("set_imager_gain", 0);
 
-  /* "native.pyx":208
+  /* "native.pyx":229
  * 
  *     def set_imager_gain(self, imager_gain):                #Image gain ##gain in a digital imaging device represents the relationship between the number of electrons acquired on an image sensor and the analog-to-digital units (ADUs) that are generated, representing the image signal. Increasing the gain amplifies the signal by increasing the ratio of ADUs to electrons acquired on the sensor. The result is that increasing gain increases the apparent brightness of an image at a given exposure
  *         self.thisptr.SetImagerGain(imager_gain)             # <<<<<<<<<<<<<<
  * 
  *     def imager_gain(self):                                 ##gives back actual imager gain value (see above)
  */
-  __pyx_t_1 = ((enum CameraLibrary::eImagerGain)PyInt_AsLong(__pyx_v_imager_gain)); if (unlikely(PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 208; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = ((enum CameraLibrary::eImagerGain)PyInt_AsLong(__pyx_v_imager_gain)); if (unlikely(PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 229; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_v_self->thisptr->SetImagerGain(__pyx_t_1);
 
-  /* "native.pyx":207
+  /* "native.pyx":228
  * 
  * 
  *     def set_imager_gain(self, imager_gain):                #Image gain ##gain in a digital imaging device represents the relationship between the number of electrons acquired on an image sensor and the analog-to-digital units (ADUs) that are generated, representing the image signal. Increasing the gain amplifies the signal by increasing the ratio of ADUs to electrons acquired on the sensor. The result is that increasing gain increases the apparent brightness of an image at a given exposure             # <<<<<<<<<<<<<<
@@ -4568,7 +4867,7 @@ static PyObject *__pyx_pf_6native_5PyCam_82set_imager_gain(struct __pyx_obj_6nat
   return __pyx_r;
 }
 
-/* "native.pyx":210
+/* "native.pyx":231
  *         self.thisptr.SetImagerGain(imager_gain)
  * 
  *     def imager_gain(self):                                 ##gives back actual imager gain value (see above)             # <<<<<<<<<<<<<<
@@ -4598,7 +4897,7 @@ static PyObject *__pyx_pf_6native_5PyCam_84imager_gain(struct __pyx_obj_6native_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("imager_gain", 0);
 
-  /* "native.pyx":211
+  /* "native.pyx":232
  * 
  *     def imager_gain(self):                                 ##gives back actual imager gain value (see above)
  *         return self.thisptr.ImagerGain()             # <<<<<<<<<<<<<<
@@ -4606,13 +4905,13 @@ static PyObject *__pyx_pf_6native_5PyCam_84imager_gain(struct __pyx_obj_6native_
  *     def imager_gain_levels(self):                          ##(virtual) probably gives back number of possible levels starting to count at 0
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyInt_FromLong(__pyx_v_self->thisptr->ImagerGain()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 211; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyInt_FromLong(__pyx_v_self->thisptr->ImagerGain()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 232; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":210
+  /* "native.pyx":231
  *         self.thisptr.SetImagerGain(imager_gain)
  * 
  *     def imager_gain(self):                                 ##gives back actual imager gain value (see above)             # <<<<<<<<<<<<<<
@@ -4631,7 +4930,7 @@ static PyObject *__pyx_pf_6native_5PyCam_84imager_gain(struct __pyx_obj_6native_
   return __pyx_r;
 }
 
-/* "native.pyx":213
+/* "native.pyx":234
  *         return self.thisptr.ImagerGain()
  * 
  *     def imager_gain_levels(self):                          ##(virtual) probably gives back number of possible levels starting to count at 0             # <<<<<<<<<<<<<<
@@ -4661,7 +4960,7 @@ static PyObject *__pyx_pf_6native_5PyCam_86imager_gain_levels(struct __pyx_obj_6
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("imager_gain_levels", 0);
 
-  /* "native.pyx":214
+  /* "native.pyx":235
  * 
  *     def imager_gain_levels(self):                          ##(virtual) probably gives back number of possible levels starting to count at 0
  *         return self.thisptr.ImagerGainLevels()             # <<<<<<<<<<<<<<
@@ -4669,13 +4968,13 @@ static PyObject *__pyx_pf_6native_5PyCam_86imager_gain_levels(struct __pyx_obj_6
  *     def is_imager_gain_available(self):                    ##returns false as implemented in camera.h but is virtual and probably camera dependent
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->ImagerGainLevels()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 214; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->thisptr->ImagerGainLevels()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 235; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":213
+  /* "native.pyx":234
  *         return self.thisptr.ImagerGain()
  * 
  *     def imager_gain_levels(self):                          ##(virtual) probably gives back number of possible levels starting to count at 0             # <<<<<<<<<<<<<<
@@ -4694,7 +4993,7 @@ static PyObject *__pyx_pf_6native_5PyCam_86imager_gain_levels(struct __pyx_obj_6
   return __pyx_r;
 }
 
-/* "native.pyx":216
+/* "native.pyx":237
  *         return self.thisptr.ImagerGainLevels()
  * 
  *     def is_imager_gain_available(self):                    ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
@@ -4724,7 +5023,7 @@ static PyObject *__pyx_pf_6native_5PyCam_88is_imager_gain_available(struct __pyx
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("is_imager_gain_available", 0);
 
-  /* "native.pyx":217
+  /* "native.pyx":238
  * 
  *     def is_imager_gain_available(self):                    ##returns false as implemented in camera.h but is virtual and probably camera dependent
  *         return self.thisptr.IsImagerGainAvailable()             # <<<<<<<<<<<<<<
@@ -4732,13 +5031,13 @@ static PyObject *__pyx_pf_6native_5PyCam_88is_imager_gain_available(struct __pyx
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->IsImagerGainAvailable()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 217; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->thisptr->IsImagerGainAvailable()); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 238; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "native.pyx":216
+  /* "native.pyx":237
  *         return self.thisptr.ImagerGainLevels()
  * 
  *     def is_imager_gain_available(self):                    ##returns false as implemented in camera.h but is virtual and probably camera dependent             # <<<<<<<<<<<<<<
@@ -4757,7 +5056,7 @@ static PyObject *__pyx_pf_6native_5PyCam_88is_imager_gain_available(struct __pyx
   return __pyx_r;
 }
 
-/* "native.pyx":220
+/* "native.pyx":241
  * 
  * 
  *     def releasecam(self):                                  #Call this when you're done with a camera             # <<<<<<<<<<<<<<
@@ -4786,7 +5085,7 @@ static PyObject *__pyx_pf_6native_5PyCam_90releasecam(struct __pyx_obj_6native_P
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("releasecam", 0);
 
-  /* "native.pyx":221
+  /* "native.pyx":242
  * 
  *     def releasecam(self):                                  #Call this when you're done with a camera
  *         self.thisptr.Release()             # <<<<<<<<<<<<<<
@@ -4795,16 +5094,16 @@ static PyObject *__pyx_pf_6native_5PyCam_90releasecam(struct __pyx_obj_6native_P
  */
   __pyx_v_self->thisptr->Release();
 
-  /* "native.pyx":222
+  /* "native.pyx":243
  *     def releasecam(self):                                  #Call this when you're done with a camera
  *         self.thisptr.Release()
  *         print "camera released"             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  if (__Pyx_PrintOne(0, __pyx_kp_s_camera_released) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 222; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (__Pyx_PrintOne(0, __pyx_kp_s_camera_released) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 243; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "native.pyx":220
+  /* "native.pyx":241
  * 
  * 
  *     def releasecam(self):                                  #Call this when you're done with a camera             # <<<<<<<<<<<<<<
@@ -4822,6 +5121,635 @@ static PyObject *__pyx_pf_6native_5PyCam_90releasecam(struct __pyx_obj_6native_P
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
+}
+
+/* "array.pxd":91
+ *             __data_union data
+ * 
+ *         def __getbuffer__(self, Py_buffer* info, int flags):             # <<<<<<<<<<<<<<
+ *             # This implementation of getbuffer is geared towards Cython
+ *             # requirements, and does not yet fullfill the PEP.
+ */
+
+/* Python wrapper */
+static CYTHON_UNUSED int __pyx_pw_7cpython_5array_5array_1__getbuffer__(PyObject *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags); /*proto*/
+static CYTHON_UNUSED int __pyx_pw_7cpython_5array_5array_1__getbuffer__(PyObject *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__getbuffer__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_7cpython_5array_5array___getbuffer__(((arrayobject *)__pyx_v_self), ((Py_buffer *)__pyx_v_info), ((int)__pyx_v_flags));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_7cpython_5array_5array___getbuffer__(arrayobject *__pyx_v_self, Py_buffer *__pyx_v_info, CYTHON_UNUSED int __pyx_v_flags) {
+  PyObject *__pyx_v_item_count = NULL;
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  char *__pyx_t_2;
+  int __pyx_t_3;
+  PyObject *__pyx_t_4 = NULL;
+  Py_ssize_t __pyx_t_5;
+  int __pyx_t_6;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("__getbuffer__", 0);
+  if (__pyx_v_info != NULL) {
+    __pyx_v_info->obj = Py_None; __Pyx_INCREF(Py_None);
+    __Pyx_GIVEREF(__pyx_v_info->obj);
+  }
+
+  /* "array.pxd":96
+ *             # In particular strided access is always provided regardless
+ *             # of flags
+ *             item_count = Py_SIZE(self)             # <<<<<<<<<<<<<<
+ * 
+ *             info.suboffsets = NULL
+ */
+  __pyx_t_1 = PyInt_FromSsize_t(Py_SIZE(((PyObject *)__pyx_v_self))); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 96; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_v_item_count = __pyx_t_1;
+  __pyx_t_1 = 0;
+
+  /* "array.pxd":98
+ *             item_count = Py_SIZE(self)
+ * 
+ *             info.suboffsets = NULL             # <<<<<<<<<<<<<<
+ *             info.buf = self.data.as_chars
+ *             info.readonly = 0
+ */
+  __pyx_v_info->suboffsets = NULL;
+
+  /* "array.pxd":99
+ * 
+ *             info.suboffsets = NULL
+ *             info.buf = self.data.as_chars             # <<<<<<<<<<<<<<
+ *             info.readonly = 0
+ *             info.ndim = 1
+ */
+  __pyx_t_2 = __pyx_v_self->data.as_chars;
+  __pyx_v_info->buf = __pyx_t_2;
+
+  /* "array.pxd":100
+ *             info.suboffsets = NULL
+ *             info.buf = self.data.as_chars
+ *             info.readonly = 0             # <<<<<<<<<<<<<<
+ *             info.ndim = 1
+ *             info.itemsize = self.ob_descr.itemsize   # e.g. sizeof(float)
+ */
+  __pyx_v_info->readonly = 0;
+
+  /* "array.pxd":101
+ *             info.buf = self.data.as_chars
+ *             info.readonly = 0
+ *             info.ndim = 1             # <<<<<<<<<<<<<<
+ *             info.itemsize = self.ob_descr.itemsize   # e.g. sizeof(float)
+ *             info.len = info.itemsize * item_count
+ */
+  __pyx_v_info->ndim = 1;
+
+  /* "array.pxd":102
+ *             info.readonly = 0
+ *             info.ndim = 1
+ *             info.itemsize = self.ob_descr.itemsize   # e.g. sizeof(float)             # <<<<<<<<<<<<<<
+ *             info.len = info.itemsize * item_count
+ * 
+ */
+  __pyx_t_3 = __pyx_v_self->ob_descr->itemsize;
+  __pyx_v_info->itemsize = __pyx_t_3;
+
+  /* "array.pxd":103
+ *             info.ndim = 1
+ *             info.itemsize = self.ob_descr.itemsize   # e.g. sizeof(float)
+ *             info.len = info.itemsize * item_count             # <<<<<<<<<<<<<<
+ * 
+ *             info.shape = <Py_ssize_t*> PyMem_Malloc(sizeof(Py_ssize_t) + 2)
+ */
+  __pyx_t_1 = PyInt_FromSsize_t(__pyx_v_info->itemsize); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 103; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_4 = PyNumber_Multiply(__pyx_t_1, __pyx_v_item_count); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 103; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_4);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_5 = __Pyx_PyIndex_AsSsize_t(__pyx_t_4); if (unlikely((__pyx_t_5 == (Py_ssize_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 103; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __pyx_v_info->len = __pyx_t_5;
+
+  /* "array.pxd":105
+ *             info.len = info.itemsize * item_count
+ * 
+ *             info.shape = <Py_ssize_t*> PyMem_Malloc(sizeof(Py_ssize_t) + 2)             # <<<<<<<<<<<<<<
+ *             if not info.shape:
+ *                 raise MemoryError()
+ */
+  __pyx_v_info->shape = ((Py_ssize_t *)PyMem_Malloc(((sizeof(Py_ssize_t)) + 2)));
+
+  /* "array.pxd":106
+ * 
+ *             info.shape = <Py_ssize_t*> PyMem_Malloc(sizeof(Py_ssize_t) + 2)
+ *             if not info.shape:             # <<<<<<<<<<<<<<
+ *                 raise MemoryError()
+ *             info.shape[0] = item_count      # constant regardless of resizing
+ */
+  __pyx_t_6 = ((!(__pyx_v_info->shape != 0)) != 0);
+  if (__pyx_t_6) {
+
+    /* "array.pxd":107
+ *             info.shape = <Py_ssize_t*> PyMem_Malloc(sizeof(Py_ssize_t) + 2)
+ *             if not info.shape:
+ *                 raise MemoryError()             # <<<<<<<<<<<<<<
+ *             info.shape[0] = item_count      # constant regardless of resizing
+ *             info.strides = &info.itemsize
+ */
+    PyErr_NoMemory(); {__pyx_filename = __pyx_f[1]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  }
+
+  /* "array.pxd":108
+ *             if not info.shape:
+ *                 raise MemoryError()
+ *             info.shape[0] = item_count      # constant regardless of resizing             # <<<<<<<<<<<<<<
+ *             info.strides = &info.itemsize
+ * 
+ */
+  __pyx_t_5 = __Pyx_PyIndex_AsSsize_t(__pyx_v_item_count); if (unlikely((__pyx_t_5 == (Py_ssize_t)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 108; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  (__pyx_v_info->shape[0]) = __pyx_t_5;
+
+  /* "array.pxd":109
+ *                 raise MemoryError()
+ *             info.shape[0] = item_count      # constant regardless of resizing
+ *             info.strides = &info.itemsize             # <<<<<<<<<<<<<<
+ * 
+ *             info.format = <char*> (info.shape + 1)
+ */
+  __pyx_v_info->strides = (&__pyx_v_info->itemsize);
+
+  /* "array.pxd":111
+ *             info.strides = &info.itemsize
+ * 
+ *             info.format = <char*> (info.shape + 1)             # <<<<<<<<<<<<<<
+ *             info.format[0] = self.ob_descr.typecode
+ *             info.format[1] = 0
+ */
+  __pyx_v_info->format = ((char *)(__pyx_v_info->shape + 1));
+
+  /* "array.pxd":112
+ * 
+ *             info.format = <char*> (info.shape + 1)
+ *             info.format[0] = self.ob_descr.typecode             # <<<<<<<<<<<<<<
+ *             info.format[1] = 0
+ *             info.obj = self
+ */
+  __pyx_t_3 = __pyx_v_self->ob_descr->typecode;
+  (__pyx_v_info->format[0]) = __pyx_t_3;
+
+  /* "array.pxd":113
+ *             info.format = <char*> (info.shape + 1)
+ *             info.format[0] = self.ob_descr.typecode
+ *             info.format[1] = 0             # <<<<<<<<<<<<<<
+ *             info.obj = self
+ * 
+ */
+  (__pyx_v_info->format[1]) = 0;
+
+  /* "array.pxd":114
+ *             info.format[0] = self.ob_descr.typecode
+ *             info.format[1] = 0
+ *             info.obj = self             # <<<<<<<<<<<<<<
+ * 
+ *         def __releasebuffer__(self, Py_buffer* info):
+ */
+  __Pyx_INCREF(((PyObject *)__pyx_v_self));
+  __Pyx_GIVEREF(((PyObject *)__pyx_v_self));
+  __Pyx_GOTREF(__pyx_v_info->obj);
+  __Pyx_DECREF(__pyx_v_info->obj);
+  __pyx_v_info->obj = ((PyObject *)__pyx_v_self);
+
+  /* "array.pxd":91
+ *             __data_union data
+ * 
+ *         def __getbuffer__(self, Py_buffer* info, int flags):             # <<<<<<<<<<<<<<
+ *             # This implementation of getbuffer is geared towards Cython
+ *             # requirements, and does not yet fullfill the PEP.
+ */
+
+  /* function exit code */
+  __pyx_r = 0;
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_4);
+  __Pyx_AddTraceback("cpython.array.array.__getbuffer__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = -1;
+  if (__pyx_v_info != NULL && __pyx_v_info->obj != NULL) {
+    __Pyx_GOTREF(__pyx_v_info->obj);
+    __Pyx_DECREF(__pyx_v_info->obj); __pyx_v_info->obj = NULL;
+  }
+  goto __pyx_L2;
+  __pyx_L0:;
+  if (__pyx_v_info != NULL && __pyx_v_info->obj == Py_None) {
+    __Pyx_GOTREF(Py_None);
+    __Pyx_DECREF(Py_None); __pyx_v_info->obj = NULL;
+  }
+  __pyx_L2:;
+  __Pyx_XDECREF(__pyx_v_item_count);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "array.pxd":116
+ *             info.obj = self
+ * 
+ *         def __releasebuffer__(self, Py_buffer* info):             # <<<<<<<<<<<<<<
+ *             PyMem_Free(info.shape)
+ * 
+ */
+
+/* Python wrapper */
+static CYTHON_UNUSED void __pyx_pw_7cpython_5array_5array_3__releasebuffer__(PyObject *__pyx_v_self, Py_buffer *__pyx_v_info); /*proto*/
+static CYTHON_UNUSED void __pyx_pw_7cpython_5array_5array_3__releasebuffer__(PyObject *__pyx_v_self, Py_buffer *__pyx_v_info) {
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__releasebuffer__ (wrapper)", 0);
+  __pyx_pf_7cpython_5array_5array_2__releasebuffer__(((arrayobject *)__pyx_v_self), ((Py_buffer *)__pyx_v_info));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+}
+
+static void __pyx_pf_7cpython_5array_5array_2__releasebuffer__(CYTHON_UNUSED arrayobject *__pyx_v_self, Py_buffer *__pyx_v_info) {
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__releasebuffer__", 0);
+
+  /* "array.pxd":117
+ * 
+ *         def __releasebuffer__(self, Py_buffer* info):
+ *             PyMem_Free(info.shape)             # <<<<<<<<<<<<<<
+ * 
+ *     array newarrayobject(PyTypeObject* type, Py_ssize_t size, arraydescr *descr)
+ */
+  PyMem_Free(__pyx_v_info->shape);
+
+  /* "array.pxd":116
+ *             info.obj = self
+ * 
+ *         def __releasebuffer__(self, Py_buffer* info):             # <<<<<<<<<<<<<<
+ *             PyMem_Free(info.shape)
+ * 
+ */
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+}
+
+/* "array.pxd":128
+ * 
+ * 
+ * cdef inline array clone(array template, Py_ssize_t length, bint zero):             # <<<<<<<<<<<<<<
+ *     """ fast creation of a new array, given a template array.
+ *     type will be same as template.
+ */
+
+static CYTHON_INLINE arrayobject *__pyx_f_7cpython_5array_clone(arrayobject *__pyx_v_template, Py_ssize_t __pyx_v_length, int __pyx_v_zero) {
+  arrayobject *__pyx_v_op = NULL;
+  arrayobject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_t_2;
+  int __pyx_t_3;
+  int __pyx_t_4;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("clone", 0);
+
+  /* "array.pxd":132
+ *     type will be same as template.
+ *     if zero is true, new array will be initialized with zeroes."""
+ *     op = newarrayobject(Py_TYPE(template), length, template.ob_descr)             # <<<<<<<<<<<<<<
+ *     if zero and op is not None:
+ *         memset(op.data.as_chars, 0, length * op.ob_descr.itemsize)
+ */
+  __pyx_t_1 = ((PyObject *)newarrayobject(Py_TYPE(((PyObject *)__pyx_v_template)), __pyx_v_length, __pyx_v_template->ob_descr)); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 132; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_v_op = ((arrayobject *)__pyx_t_1);
+  __pyx_t_1 = 0;
+
+  /* "array.pxd":133
+ *     if zero is true, new array will be initialized with zeroes."""
+ *     op = newarrayobject(Py_TYPE(template), length, template.ob_descr)
+ *     if zero and op is not None:             # <<<<<<<<<<<<<<
+ *         memset(op.data.as_chars, 0, length * op.ob_descr.itemsize)
+ *     return op
+ */
+  __pyx_t_3 = (__pyx_v_zero != 0);
+  if (__pyx_t_3) {
+  } else {
+    __pyx_t_2 = __pyx_t_3;
+    goto __pyx_L4_bool_binop_done;
+  }
+  __pyx_t_3 = (((PyObject *)__pyx_v_op) != Py_None);
+  __pyx_t_4 = (__pyx_t_3 != 0);
+  __pyx_t_2 = __pyx_t_4;
+  __pyx_L4_bool_binop_done:;
+  if (__pyx_t_2) {
+
+    /* "array.pxd":134
+ *     op = newarrayobject(Py_TYPE(template), length, template.ob_descr)
+ *     if zero and op is not None:
+ *         memset(op.data.as_chars, 0, length * op.ob_descr.itemsize)             # <<<<<<<<<<<<<<
+ *     return op
+ * 
+ */
+    memset(__pyx_v_op->data.as_chars, 0, (__pyx_v_length * __pyx_v_op->ob_descr->itemsize));
+    goto __pyx_L3;
+  }
+  __pyx_L3:;
+
+  /* "array.pxd":135
+ *     if zero and op is not None:
+ *         memset(op.data.as_chars, 0, length * op.ob_descr.itemsize)
+ *     return op             # <<<<<<<<<<<<<<
+ * 
+ * cdef inline array copy(array self):
+ */
+  __Pyx_XDECREF(((PyObject *)__pyx_r));
+  __Pyx_INCREF(((PyObject *)__pyx_v_op));
+  __pyx_r = __pyx_v_op;
+  goto __pyx_L0;
+
+  /* "array.pxd":128
+ * 
+ * 
+ * cdef inline array clone(array template, Py_ssize_t length, bint zero):             # <<<<<<<<<<<<<<
+ *     """ fast creation of a new array, given a template array.
+ *     type will be same as template.
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("cpython.array.clone", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = 0;
+  __pyx_L0:;
+  __Pyx_XDECREF((PyObject *)__pyx_v_op);
+  __Pyx_XGIVEREF((PyObject *)__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "array.pxd":137
+ *     return op
+ * 
+ * cdef inline array copy(array self):             # <<<<<<<<<<<<<<
+ *     """ make a copy of an array. """
+ *     op = newarrayobject(Py_TYPE(self), Py_SIZE(self), self.ob_descr)
+ */
+
+static CYTHON_INLINE arrayobject *__pyx_f_7cpython_5array_copy(arrayobject *__pyx_v_self) {
+  arrayobject *__pyx_v_op = NULL;
+  arrayobject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("copy", 0);
+
+  /* "array.pxd":139
+ * cdef inline array copy(array self):
+ *     """ make a copy of an array. """
+ *     op = newarrayobject(Py_TYPE(self), Py_SIZE(self), self.ob_descr)             # <<<<<<<<<<<<<<
+ *     memcpy(op.data.as_chars, self.data.as_chars, Py_SIZE(op) * op.ob_descr.itemsize)
+ *     return op
+ */
+  __pyx_t_1 = ((PyObject *)newarrayobject(Py_TYPE(((PyObject *)__pyx_v_self)), Py_SIZE(((PyObject *)__pyx_v_self)), __pyx_v_self->ob_descr)); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_v_op = ((arrayobject *)__pyx_t_1);
+  __pyx_t_1 = 0;
+
+  /* "array.pxd":140
+ *     """ make a copy of an array. """
+ *     op = newarrayobject(Py_TYPE(self), Py_SIZE(self), self.ob_descr)
+ *     memcpy(op.data.as_chars, self.data.as_chars, Py_SIZE(op) * op.ob_descr.itemsize)             # <<<<<<<<<<<<<<
+ *     return op
+ * 
+ */
+  memcpy(__pyx_v_op->data.as_chars, __pyx_v_self->data.as_chars, (Py_SIZE(((PyObject *)__pyx_v_op)) * __pyx_v_op->ob_descr->itemsize));
+
+  /* "array.pxd":141
+ *     op = newarrayobject(Py_TYPE(self), Py_SIZE(self), self.ob_descr)
+ *     memcpy(op.data.as_chars, self.data.as_chars, Py_SIZE(op) * op.ob_descr.itemsize)
+ *     return op             # <<<<<<<<<<<<<<
+ * 
+ * cdef inline int extend_buffer(array self, char* stuff, Py_ssize_t n) except -1:
+ */
+  __Pyx_XDECREF(((PyObject *)__pyx_r));
+  __Pyx_INCREF(((PyObject *)__pyx_v_op));
+  __pyx_r = __pyx_v_op;
+  goto __pyx_L0;
+
+  /* "array.pxd":137
+ *     return op
+ * 
+ * cdef inline array copy(array self):             # <<<<<<<<<<<<<<
+ *     """ make a copy of an array. """
+ *     op = newarrayobject(Py_TYPE(self), Py_SIZE(self), self.ob_descr)
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("cpython.array.copy", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = 0;
+  __pyx_L0:;
+  __Pyx_XDECREF((PyObject *)__pyx_v_op);
+  __Pyx_XGIVEREF((PyObject *)__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "array.pxd":143
+ *     return op
+ * 
+ * cdef inline int extend_buffer(array self, char* stuff, Py_ssize_t n) except -1:             # <<<<<<<<<<<<<<
+ *     """ efficent appending of new stuff of same type
+ *     (e.g. of same array type)
+ */
+
+static CYTHON_INLINE int __pyx_f_7cpython_5array_extend_buffer(arrayobject *__pyx_v_self, char *__pyx_v_stuff, Py_ssize_t __pyx_v_n) {
+  Py_ssize_t __pyx_v_itemsize;
+  Py_ssize_t __pyx_v_origsize;
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("extend_buffer", 0);
+
+  /* "array.pxd":147
+ *     (e.g. of same array type)
+ *     n: number of elements (not number of bytes!) """
+ *     cdef Py_ssize_t itemsize = self.ob_descr.itemsize             # <<<<<<<<<<<<<<
+ *     cdef Py_ssize_t origsize = Py_SIZE(self)
+ *     resize_smart(self, origsize + n)
+ */
+  __pyx_t_1 = __pyx_v_self->ob_descr->itemsize;
+  __pyx_v_itemsize = __pyx_t_1;
+
+  /* "array.pxd":148
+ *     n: number of elements (not number of bytes!) """
+ *     cdef Py_ssize_t itemsize = self.ob_descr.itemsize
+ *     cdef Py_ssize_t origsize = Py_SIZE(self)             # <<<<<<<<<<<<<<
+ *     resize_smart(self, origsize + n)
+ *     memcpy(self.data.as_chars + origsize * itemsize, stuff, n * itemsize)
+ */
+  __pyx_v_origsize = Py_SIZE(((PyObject *)__pyx_v_self));
+
+  /* "array.pxd":149
+ *     cdef Py_ssize_t itemsize = self.ob_descr.itemsize
+ *     cdef Py_ssize_t origsize = Py_SIZE(self)
+ *     resize_smart(self, origsize + n)             # <<<<<<<<<<<<<<
+ *     memcpy(self.data.as_chars + origsize * itemsize, stuff, n * itemsize)
+ *     return 0
+ */
+  __pyx_t_1 = resize_smart(__pyx_v_self, (__pyx_v_origsize + __pyx_v_n)); if (unlikely(__pyx_t_1 == -1)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 149; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+
+  /* "array.pxd":150
+ *     cdef Py_ssize_t origsize = Py_SIZE(self)
+ *     resize_smart(self, origsize + n)
+ *     memcpy(self.data.as_chars + origsize * itemsize, stuff, n * itemsize)             # <<<<<<<<<<<<<<
+ *     return 0
+ * 
+ */
+  memcpy((__pyx_v_self->data.as_chars + (__pyx_v_origsize * __pyx_v_itemsize)), __pyx_v_stuff, (__pyx_v_n * __pyx_v_itemsize));
+
+  /* "array.pxd":151
+ *     resize_smart(self, origsize + n)
+ *     memcpy(self.data.as_chars + origsize * itemsize, stuff, n * itemsize)
+ *     return 0             # <<<<<<<<<<<<<<
+ * 
+ * cdef inline int extend(array self, array other) except -1:
+ */
+  __pyx_r = 0;
+  goto __pyx_L0;
+
+  /* "array.pxd":143
+ *     return op
+ * 
+ * cdef inline int extend_buffer(array self, char* stuff, Py_ssize_t n) except -1:             # <<<<<<<<<<<<<<
+ *     """ efficent appending of new stuff of same type
+ *     (e.g. of same array type)
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("cpython.array.extend_buffer", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = -1;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "array.pxd":153
+ *     return 0
+ * 
+ * cdef inline int extend(array self, array other) except -1:             # <<<<<<<<<<<<<<
+ *     """ extend array with data from another array; types must match. """
+ *     if self.ob_descr.typecode != other.ob_descr.typecode:
+ */
+
+static CYTHON_INLINE int __pyx_f_7cpython_5array_extend(arrayobject *__pyx_v_self, arrayobject *__pyx_v_other) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  int __pyx_t_2;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("extend", 0);
+
+  /* "array.pxd":155
+ * cdef inline int extend(array self, array other) except -1:
+ *     """ extend array with data from another array; types must match. """
+ *     if self.ob_descr.typecode != other.ob_descr.typecode:             # <<<<<<<<<<<<<<
+ *         PyErr_BadArgument()
+ *     return extend_buffer(self, other.data.as_chars, Py_SIZE(other))
+ */
+  __pyx_t_1 = ((__pyx_v_self->ob_descr->typecode != __pyx_v_other->ob_descr->typecode) != 0);
+  if (__pyx_t_1) {
+
+    /* "array.pxd":156
+ *     """ extend array with data from another array; types must match. """
+ *     if self.ob_descr.typecode != other.ob_descr.typecode:
+ *         PyErr_BadArgument()             # <<<<<<<<<<<<<<
+ *     return extend_buffer(self, other.data.as_chars, Py_SIZE(other))
+ * 
+ */
+    __pyx_t_2 = PyErr_BadArgument(); if (unlikely(__pyx_t_2 == 0)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 156; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    goto __pyx_L3;
+  }
+  __pyx_L3:;
+
+  /* "array.pxd":157
+ *     if self.ob_descr.typecode != other.ob_descr.typecode:
+ *         PyErr_BadArgument()
+ *     return extend_buffer(self, other.data.as_chars, Py_SIZE(other))             # <<<<<<<<<<<<<<
+ * 
+ * cdef inline void zero(array self):
+ */
+  __pyx_t_2 = __pyx_f_7cpython_5array_extend_buffer(__pyx_v_self, __pyx_v_other->data.as_chars, Py_SIZE(((PyObject *)__pyx_v_other))); if (unlikely(__pyx_t_2 == -1)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 157; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_r = __pyx_t_2;
+  goto __pyx_L0;
+
+  /* "array.pxd":153
+ *     return 0
+ * 
+ * cdef inline int extend(array self, array other) except -1:             # <<<<<<<<<<<<<<
+ *     """ extend array with data from another array; types must match. """
+ *     if self.ob_descr.typecode != other.ob_descr.typecode:
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("cpython.array.extend", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = -1;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "array.pxd":159
+ *     return extend_buffer(self, other.data.as_chars, Py_SIZE(other))
+ * 
+ * cdef inline void zero(array self):             # <<<<<<<<<<<<<<
+ *     """ set all elements of array to zero. """
+ *     memset(self.data.as_chars, 0, Py_SIZE(self) * self.ob_descr.itemsize)
+ */
+
+static CYTHON_INLINE void __pyx_f_7cpython_5array_zero(arrayobject *__pyx_v_self) {
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("zero", 0);
+
+  /* "array.pxd":161
+ * cdef inline void zero(array self):
+ *     """ set all elements of array to zero. """
+ *     memset(self.data.as_chars, 0, Py_SIZE(self) * self.ob_descr.itemsize)             # <<<<<<<<<<<<<<
+ */
+  memset(__pyx_v_self->data.as_chars, 0, (Py_SIZE(((PyObject *)__pyx_v_self)) * __pyx_v_self->ob_descr->itemsize));
+
+  /* "array.pxd":159
+ *     return extend_buffer(self, other.data.as_chars, Py_SIZE(other))
+ * 
+ * cdef inline void zero(array self):             # <<<<<<<<<<<<<<
+ *     """ set all elements of array to zero. """
+ *     memset(self.data.as_chars, 0, Py_SIZE(self) * self.ob_descr.itemsize)
+ */
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
 }
 
 static PyObject *__pyx_tp_new_6native_PyCamM(PyTypeObject *t, CYTHON_UNUSED PyObject *a, CYTHON_UNUSED PyObject *k) {
@@ -5154,34 +6082,38 @@ static struct PyModuleDef __pyx_moduledef = {
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_s_Cannot_set_AGC_Automatic_Gain_Co, __pyx_k_Cannot_set_AGC_Automatic_Gain_Co, sizeof(__pyx_k_Cannot_set_AGC_Automatic_Gain_Co), 0, 0, 1, 0},
   {&__pyx_kp_s_Intensity_Values_for_IR_LEDs_mus, __pyx_k_Intensity_Values_for_IR_LEDs_mus, sizeof(__pyx_k_Intensity_Values_for_IR_LEDs_mus), 0, 0, 1, 0},
+  {&__pyx_n_s_MemoryError, __pyx_k_MemoryError, sizeof(__pyx_k_MemoryError), 0, 0, 1, 1},
   {&__pyx_kp_s_This_camera_has_no_filter_switch, __pyx_k_This_camera_has_no_filter_switch, sizeof(__pyx_k_This_camera_has_no_filter_switch), 0, 0, 1, 0},
   {&__pyx_n_s_Vash, __pyx_k_Vash, sizeof(__pyx_k_Vash), 0, 0, 1, 1},
   {&__pyx_n_s_are_cameras_initialized, __pyx_k_are_cameras_initialized, sizeof(__pyx_k_are_cameras_initialized), 0, 0, 1, 1},
+  {&__pyx_n_s_array, __pyx_k_array, sizeof(__pyx_k_array), 0, 0, 1, 1},
   {&__pyx_n_s_author, __pyx_k_author, sizeof(__pyx_k_author), 0, 0, 1, 1},
   {&__pyx_n_s_b, __pyx_k_b, sizeof(__pyx_k_b), 0, 0, 1, 1},
   {&__pyx_kp_s_camera_released, __pyx_k_camera_released, sizeof(__pyx_k_camera_released), 0, 0, 1, 0},
-  {&__pyx_n_s_count, __pyx_k_count, sizeof(__pyx_k_count), 0, 0, 1, 1},
   {&__pyx_n_s_enable, __pyx_k_enable, sizeof(__pyx_k_enable), 0, 0, 1, 1},
   {&__pyx_n_s_end, __pyx_k_end, sizeof(__pyx_k_end), 0, 0, 1, 1},
   {&__pyx_n_s_file, __pyx_k_file, sizeof(__pyx_k_file), 0, 0, 1, 1},
   {&__pyx_n_s_format, __pyx_k_format, sizeof(__pyx_k_format), 0, 0, 1, 1},
   {&__pyx_n_s_g, __pyx_k_g, sizeof(__pyx_k_g), 0, 0, 1, 1},
+  {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
   {&__pyx_n_s_is_agc_available, __pyx_k_is_agc_available, sizeof(__pyx_k_is_agc_available), 0, 0, 1, 1},
   {&__pyx_n_s_is_filter_switch_available, __pyx_k_is_filter_switch_available, sizeof(__pyx_k_is_filter_switch_available), 0, 0, 1, 1},
   {&__pyx_n_s_led, __pyx_k_led, sizeof(__pyx_k_led), 0, 0, 1, 1},
-  {&__pyx_n_s_light_color, __pyx_k_light_color, sizeof(__pyx_k_light_color), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
   {&__pyx_n_s_maximum_intensity, __pyx_k_maximum_intensity, sizeof(__pyx_k_maximum_intensity), 0, 0, 1, 1},
   {&__pyx_n_s_minimum_intensity, __pyx_k_minimum_intensity, sizeof(__pyx_k_minimum_intensity), 0, 0, 1, 1},
   {&__pyx_n_s_print, __pyx_k_print, sizeof(__pyx_k_print), 0, 0, 1, 1},
   {&__pyx_n_s_property, __pyx_k_property, sizeof(__pyx_k_property), 0, 0, 1, 1},
   {&__pyx_n_s_r, __pyx_k_r, sizeof(__pyx_k_r), 0, 0, 1, 1},
+  {&__pyx_n_s_range, __pyx_k_range, sizeof(__pyx_k_range), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {&__pyx_n_s_value, __pyx_k_value, sizeof(__pyx_k_value), 0, 0, 1, 1},
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_property = __Pyx_GetBuiltinName(__pyx_n_s_property); if (!__pyx_builtin_property) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 49; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_property = __Pyx_GetBuiltinName(__pyx_n_s_property); if (!__pyx_builtin_property) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 52; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 107; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -5282,19 +6214,29 @@ PyMODINIT_FUNC PyInit_native(void)
   /*--- Variable export code ---*/
   /*--- Function export code ---*/
   /*--- Type init code ---*/
-  if (PyType_Ready(&__pyx_type_6native_PyCamM) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 8; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyType_Ready(&__pyx_type_6native_PyCamM) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 11; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_type_6native_PyCamM.tp_print = 0;
-  if (PyObject_SetAttrString(__pyx_m, "PyCamM", (PyObject *)&__pyx_type_6native_PyCamM) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 8; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyObject_SetAttrString(__pyx_m, "PyCamM", (PyObject *)&__pyx_type_6native_PyCamM) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 11; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_ptype_6native_PyCamM = &__pyx_type_6native_PyCamM;
-  if (PyType_Ready(&__pyx_type_6native_SColor) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyType_Ready(&__pyx_type_6native_SColor) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_type_6native_SColor.tp_print = 0;
-  if (PyObject_SetAttrString(__pyx_m, "SColor", (PyObject *)&__pyx_type_6native_SColor) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyObject_SetAttrString(__pyx_m, "SColor", (PyObject *)&__pyx_type_6native_SColor) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_ptype_6native_SColor = &__pyx_type_6native_SColor;
-  if (PyType_Ready(&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 62; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyType_Ready(&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 65; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_type_6native_PyCam.tp_print = 0;
-  if (PyObject_SetAttrString(__pyx_m, "PyCam", (PyObject *)&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 62; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyObject_SetAttrString(__pyx_m, "PyCam", (PyObject *)&__pyx_type_6native_PyCam) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 65; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_ptype_6native_PyCam = &__pyx_type_6native_PyCam;
   /*--- Type import code ---*/
+  __pyx_ptype_7cpython_4type_type = __Pyx_ImportType(__Pyx_BUILTIN_MODULE_NAME, "type", 
+  #if CYTHON_COMPILING_IN_PYPY
+  sizeof(PyTypeObject),
+  #else
+  sizeof(PyHeapTypeObject),
+  #endif
+  0); if (unlikely(!__pyx_ptype_7cpython_4type_type)) {__pyx_filename = __pyx_f[2]; __pyx_lineno = 9; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_ptype_7cpython_4bool_bool = __Pyx_ImportType(__Pyx_BUILTIN_MODULE_NAME, "bool", sizeof(PyBoolObject), 0); if (unlikely(!__pyx_ptype_7cpython_4bool_bool)) {__pyx_filename = __pyx_f[3]; __pyx_lineno = 8; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_ptype_7cpython_7complex_complex = __Pyx_ImportType(__Pyx_BUILTIN_MODULE_NAME, "complex", sizeof(PyComplexObject), 0); if (unlikely(!__pyx_ptype_7cpython_7complex_complex)) {__pyx_filename = __pyx_f[4]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_ptype_7cpython_5array_array = __Pyx_ImportType("array", "array", sizeof(arrayobject), 0); if (unlikely(!__pyx_ptype_7cpython_5array_array)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 58; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   /*--- Variable import code ---*/
   /*--- Function import code ---*/
   /*--- Execution code ---*/
@@ -5305,92 +6247,104 @@ PyMODINIT_FUNC PyInit_native(void)
  * # means comment from official SDK API (or Cython page) ## means comment from me
  */
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_author, __pyx_n_s_Vash) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_author, __pyx_n_s_Vash) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_author, __pyx_n_s_Vash) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "native.pyx":50
+  /* "native.pyx":7
+ * include "cnative.pxd"
+ * from cpython cimport array
+ * import array             # <<<<<<<<<<<<<<
+ * from libc.stdlib cimport malloc, free
+ * 
+ */
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_array, 0, -1); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_array, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 7; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "native.pyx":53
  * 
  *     @property
  *     def r(self):             # <<<<<<<<<<<<<<
  *         return self.thisptr.Red
  * 
  */
-  __pyx_t_1 = __Pyx_GetNameInClass((PyObject *)__pyx_ptype_6native_SColor, __pyx_n_s_r); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 50; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_GetNameInClass((PyObject *)__pyx_ptype_6native_SColor, __pyx_n_s_r); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 53; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
 
-  /* "native.pyx":49
+  /* "native.pyx":52
  *         self.thisptr.Blue = b
  * 
  *     @property             # <<<<<<<<<<<<<<
  *     def r(self):
  *         return self.thisptr.Red
  */
-  __pyx_t_2 = PyTuple_New(1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 49; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = PyTuple_New(1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 52; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_1);
   __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_property, __pyx_t_2, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 49; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_property, __pyx_t_2, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 52; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_6native_SColor->tp_dict, __pyx_n_s_r, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 50; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_6native_SColor->tp_dict, __pyx_n_s_r, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 53; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   PyType_Modified(__pyx_ptype_6native_SColor);
 
-  /* "native.pyx":54
+  /* "native.pyx":57
  * 
  *     @property
  *     def g(self):             # <<<<<<<<<<<<<<
  *         return self.thisptr.Green
  * 
  */
-  __pyx_t_1 = __Pyx_GetNameInClass((PyObject *)__pyx_ptype_6native_SColor, __pyx_n_s_g); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 54; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_GetNameInClass((PyObject *)__pyx_ptype_6native_SColor, __pyx_n_s_g); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 57; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
 
-  /* "native.pyx":53
+  /* "native.pyx":56
  *         return self.thisptr.Red
  * 
  *     @property             # <<<<<<<<<<<<<<
  *     def g(self):
  *         return self.thisptr.Green
  */
-  __pyx_t_2 = PyTuple_New(1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 53; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = PyTuple_New(1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 56; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_1);
   __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_property, __pyx_t_2, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 53; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_property, __pyx_t_2, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 56; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_6native_SColor->tp_dict, __pyx_n_s_g, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 54; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_6native_SColor->tp_dict, __pyx_n_s_g, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 57; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   PyType_Modified(__pyx_ptype_6native_SColor);
 
-  /* "native.pyx":58
+  /* "native.pyx":61
  * 
  *     @property
  *     def b(self):             # <<<<<<<<<<<<<<
  *         return self.thisptr.Blue
  * 
  */
-  __pyx_t_1 = __Pyx_GetNameInClass((PyObject *)__pyx_ptype_6native_SColor, __pyx_n_s_b); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 58; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_GetNameInClass((PyObject *)__pyx_ptype_6native_SColor, __pyx_n_s_b); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
 
-  /* "native.pyx":57
+  /* "native.pyx":60
  *         return self.thisptr.Green
  * 
  *     @property             # <<<<<<<<<<<<<<
  *     def b(self):
  *         return self.thisptr.Blue
  */
-  __pyx_t_2 = PyTuple_New(1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 57; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_2 = PyTuple_New(1); if (unlikely(!__pyx_t_2)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_1);
   __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_property, __pyx_t_2, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 57; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_property, __pyx_t_2, NULL); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (PyDict_SetItem((PyObject *)__pyx_ptype_6native_SColor->tp_dict, __pyx_n_s_b, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 58; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem((PyObject *)__pyx_ptype_6native_SColor->tp_dict, __pyx_n_s_b, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   PyType_Modified(__pyx_ptype_6native_SColor);
 
@@ -5404,106 +6358,114 @@ PyMODINIT_FUNC PyInit_native(void)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
+  /* "array.pxd":159
+ *     return extend_buffer(self, other.data.as_chars, Py_SIZE(other))
+ * 
+ * cdef inline void zero(array self):             # <<<<<<<<<<<<<<
+ *     """ set all elements of array to zero. """
+ *     memset(self.data.as_chars, 0, Py_SIZE(self) * self.ob_descr.itemsize)
+ */
+
   /*--- Wrapped vars code ---*/
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::GreenStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 13; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "GreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 13; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 13; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "GreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 13; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level0);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 38; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "Gain_Level0", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 38; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 38; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level0", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 38; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level3);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 41; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "Gain_Level3", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 41; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 41; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level3", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 41; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level2);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 40; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "Gain_Level2", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 40; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 40; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level2", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 40; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level5);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "Gain_Level5", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level5", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 43; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level4);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "Gain_Level4", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level4", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 42; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level7);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 45; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "Gain_Level7", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 45; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 45; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level7", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 45; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level6);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 44; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "Gain_Level6", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 44; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 44; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level6", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 44; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::AimAssistLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 33; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "AimAssistLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 33; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 33; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "AimAssistLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 33; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::SNAV4FrontGreenStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "SNAV4FrontGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "SNAV4FrontGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 28; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::CaseStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "CaseStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "CaseStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 15; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::SNAV4BottomStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 29; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "SNAV4BottomStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 29; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 29; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "SNAV4BottomStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 29; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::RightRedStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "RightRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "RightRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 22; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::IlluminationLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 16; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "IlluminationLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 16; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 16; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "IlluminationLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 16; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::LeftRedStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "LeftRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "LeftRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 20; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::Gain_Level1);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "Gain_Level1", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "Gain_Level1", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 39; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::SNAV4FrontRedStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "SNAV4FrontRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "SNAV4FrontRedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 27; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::LeftGreenStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "LeftGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "LeftGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 21; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::RightGreenStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 23; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "RightGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 23; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 23; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "RightGreenStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 23; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
   {
     PyObject* wrapped = PyInt_FromLong(CameraLibrary::RedStatusLED);
-    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    if (PyObject_SetAttrString(__pyx_m, "RedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    if (unlikely(!wrapped)) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (PyObject_SetAttrString(__pyx_m, "RedStatusLED", wrapped) < 0) {__pyx_filename = __pyx_f[5]; __pyx_lineno = 14; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
   }
 
   goto __pyx_L0;
@@ -5818,32 +6780,6 @@ bad:
     return -1;
 }
 
-static void __Pyx_RaiseArgumentTypeInvalid(const char* name, PyObject *obj, PyTypeObject *type) {
-    PyErr_Format(PyExc_TypeError,
-        "Argument '%.200s' has incorrect type (expected %.200s, got %.200s)",
-        name, type->tp_name, Py_TYPE(obj)->tp_name);
-}
-static CYTHON_INLINE int __Pyx_ArgTypeTest(PyObject *obj, PyTypeObject *type, int none_allowed,
-    const char *name, int exact)
-{
-    if (unlikely(!type)) {
-        PyErr_SetString(PyExc_SystemError, "Missing type object");
-        return 0;
-    }
-    if (none_allowed && obj == Py_None) return 1;
-    else if (exact) {
-        if (likely(Py_TYPE(obj) == type)) return 1;
-        #if PY_MAJOR_VERSION == 2
-        else if ((type == &PyBaseString_Type) && likely(__Pyx_PyBaseString_CheckExact(obj))) return 1;
-        #endif
-    }
-    else {
-        if (likely(PyObject_TypeCheck(obj, type))) return 1;
-    }
-    __Pyx_RaiseArgumentTypeInvalid(name, obj, type);
-    return 0;
-}
-
 static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name) {
     PyObject *result;
 #if CYTHON_COMPILING_IN_CPYTHON
@@ -6028,6 +6964,79 @@ bad:
     Py_XDECREF(py_frame);
 }
 
+static PyObject *__Pyx_Import(PyObject *name, PyObject *from_list, int level) {
+    PyObject *empty_list = 0;
+    PyObject *module = 0;
+    PyObject *global_dict = 0;
+    PyObject *empty_dict = 0;
+    PyObject *list;
+    #if PY_VERSION_HEX < 0x03030000
+    PyObject *py_import;
+    py_import = __Pyx_PyObject_GetAttrStr(__pyx_b, __pyx_n_s_import);
+    if (!py_import)
+        goto bad;
+    #endif
+    if (from_list)
+        list = from_list;
+    else {
+        empty_list = PyList_New(0);
+        if (!empty_list)
+            goto bad;
+        list = empty_list;
+    }
+    global_dict = PyModule_GetDict(__pyx_m);
+    if (!global_dict)
+        goto bad;
+    empty_dict = PyDict_New();
+    if (!empty_dict)
+        goto bad;
+    {
+        #if PY_MAJOR_VERSION >= 3
+        if (level == -1) {
+            if (strchr(__Pyx_MODULE_NAME, '.')) {
+                #if PY_VERSION_HEX < 0x03030000
+                PyObject *py_level = PyInt_FromLong(1);
+                if (!py_level)
+                    goto bad;
+                module = PyObject_CallFunctionObjArgs(py_import,
+                    name, global_dict, empty_dict, list, py_level, NULL);
+                Py_DECREF(py_level);
+                #else
+                module = PyImport_ImportModuleLevelObject(
+                    name, global_dict, empty_dict, list, 1);
+                #endif
+                if (!module) {
+                    if (!PyErr_ExceptionMatches(PyExc_ImportError))
+                        goto bad;
+                    PyErr_Clear();
+                }
+            }
+            level = 0;
+        }
+        #endif
+        if (!module) {
+            #if PY_VERSION_HEX < 0x03030000
+            PyObject *py_level = PyInt_FromLong(level);
+            if (!py_level)
+                goto bad;
+            module = PyObject_CallFunctionObjArgs(py_import,
+                name, global_dict, empty_dict, list, py_level, NULL);
+            Py_DECREF(py_level);
+            #else
+            module = PyImport_ImportModuleLevelObject(
+                name, global_dict, empty_dict, list, level);
+            #endif
+        }
+    }
+bad:
+    #if PY_VERSION_HEX < 0x03030000
+    Py_XDECREF(py_import);
+    #endif
+    Py_XDECREF(empty_list);
+    Py_XDECREF(empty_dict);
+    return module;
+}
+
 #define __PYX_VERIFY_RETURN_INT(target_type, func_type, func_value)       \
     {                                                                     \
         func_type value = func_value;                                     \
@@ -6154,6 +7163,32 @@ raise_neg_overflow:
     return (unsigned char) -1;
 }
 
+static CYTHON_INLINE PyObject* __Pyx_PyInt_From_unsigned_char(unsigned char value) {
+    const unsigned char neg_one = (unsigned char) -1, const_zero = 0;
+    const int is_unsigned = neg_one > const_zero;
+    if (is_unsigned) {
+        if (sizeof(unsigned char) < sizeof(long)) {
+            return PyInt_FromLong((long) value);
+        } else if (sizeof(unsigned char) <= sizeof(unsigned long)) {
+            return PyLong_FromUnsignedLong((unsigned long) value);
+        } else if (sizeof(unsigned char) <= sizeof(unsigned PY_LONG_LONG)) {
+            return PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) value);
+        }
+    } else {
+        if (sizeof(unsigned char) <= sizeof(long)) {
+            return PyInt_FromLong((long) value);
+        } else if (sizeof(unsigned char) <= sizeof(PY_LONG_LONG)) {
+            return PyLong_FromLongLong((PY_LONG_LONG) value);
+        }
+    }
+    {
+        int one = 1; int little = (int)*(unsigned char *)&one;
+        unsigned char *bytes = (unsigned char *)&value;
+        return _PyLong_FromByteArray(bytes, sizeof(unsigned char),
+                                     little, !is_unsigned);
+    }
+}
+
 static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *x) {
     const int neg_one = (int) -1, const_zero = 0;
     const int is_unsigned = neg_one > const_zero;
@@ -6259,32 +7294,6 @@ raise_neg_overflow:
     return (int) -1;
 }
 
-static CYTHON_INLINE PyObject* __Pyx_PyInt_From_unsigned_char(unsigned char value) {
-    const unsigned char neg_one = (unsigned char) -1, const_zero = 0;
-    const int is_unsigned = neg_one > const_zero;
-    if (is_unsigned) {
-        if (sizeof(unsigned char) < sizeof(long)) {
-            return PyInt_FromLong((long) value);
-        } else if (sizeof(unsigned char) <= sizeof(unsigned long)) {
-            return PyLong_FromUnsignedLong((unsigned long) value);
-        } else if (sizeof(unsigned char) <= sizeof(unsigned PY_LONG_LONG)) {
-            return PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG) value);
-        }
-    } else {
-        if (sizeof(unsigned char) <= sizeof(long)) {
-            return PyInt_FromLong((long) value);
-        } else if (sizeof(unsigned char) <= sizeof(PY_LONG_LONG)) {
-            return PyLong_FromLongLong((PY_LONG_LONG) value);
-        }
-    }
-    {
-        int one = 1; int little = (int)*(unsigned char *)&one;
-        unsigned char *bytes = (unsigned char *)&value;
-        return _PyLong_FromByteArray(bytes, sizeof(unsigned char),
-                                     little, !is_unsigned);
-    }
-}
-
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value) {
     const int neg_one = (int) -1, const_zero = 0;
     const int is_unsigned = neg_one > const_zero;
@@ -6309,6 +7318,111 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value) {
         return _PyLong_FromByteArray(bytes, sizeof(int),
                                      little, !is_unsigned);
     }
+}
+
+static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
+    const long neg_one = (long) -1, const_zero = 0;
+    const int is_unsigned = neg_one > const_zero;
+#if PY_MAJOR_VERSION < 3
+    if (likely(PyInt_Check(x))) {
+        if (sizeof(long) < sizeof(long)) {
+            __PYX_VERIFY_RETURN_INT(long, long, PyInt_AS_LONG(x))
+        } else {
+            long val = PyInt_AS_LONG(x);
+            if (is_unsigned && unlikely(val < 0)) {
+                goto raise_neg_overflow;
+            }
+            return (long) val;
+        }
+    } else
+#endif
+    if (likely(PyLong_Check(x))) {
+        if (is_unsigned) {
+#if CYTHON_COMPILING_IN_CPYTHON && PY_MAJOR_VERSION >= 3
+ #if CYTHON_USE_PYLONG_INTERNALS
+            switch (Py_SIZE(x)) {
+                case  0: return 0;
+                case  1: __PYX_VERIFY_RETURN_INT(long, digit, ((PyLongObject*)x)->ob_digit[0]);
+            }
+ #endif
+#endif
+#if CYTHON_COMPILING_IN_CPYTHON
+            if (unlikely(Py_SIZE(x) < 0)) {
+                goto raise_neg_overflow;
+            }
+#else
+            {
+                int result = PyObject_RichCompareBool(x, Py_False, Py_LT);
+                if (unlikely(result < 0))
+                    return (long) -1;
+                if (unlikely(result == 1))
+                    goto raise_neg_overflow;
+            }
+#endif
+            if (sizeof(long) <= sizeof(unsigned long)) {
+                __PYX_VERIFY_RETURN_INT(long, unsigned long, PyLong_AsUnsignedLong(x))
+            } else if (sizeof(long) <= sizeof(unsigned PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT(long, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
+            }
+        } else {
+#if CYTHON_COMPILING_IN_CPYTHON && PY_MAJOR_VERSION >= 3
+ #if CYTHON_USE_PYLONG_INTERNALS
+            switch (Py_SIZE(x)) {
+                case  0: return 0;
+                case  1: __PYX_VERIFY_RETURN_INT(long,  digit, +(((PyLongObject*)x)->ob_digit[0]));
+                case -1: __PYX_VERIFY_RETURN_INT(long, sdigit, -(sdigit) ((PyLongObject*)x)->ob_digit[0]);
+            }
+ #endif
+#endif
+            if (sizeof(long) <= sizeof(long)) {
+                __PYX_VERIFY_RETURN_INT(long, long, PyLong_AsLong(x))
+            } else if (sizeof(long) <= sizeof(PY_LONG_LONG)) {
+                __PYX_VERIFY_RETURN_INT(long, PY_LONG_LONG, PyLong_AsLongLong(x))
+            }
+        }
+        {
+#if CYTHON_COMPILING_IN_PYPY && !defined(_PyLong_AsByteArray)
+            PyErr_SetString(PyExc_RuntimeError,
+                            "_PyLong_AsByteArray() not available in PyPy, cannot convert large numbers");
+#else
+            long val;
+            PyObject *v = __Pyx_PyNumber_Int(x);
+ #if PY_MAJOR_VERSION < 3
+            if (likely(v) && !PyLong_Check(v)) {
+                PyObject *tmp = v;
+                v = PyNumber_Long(tmp);
+                Py_DECREF(tmp);
+            }
+ #endif
+            if (likely(v)) {
+                int one = 1; int is_little = (int)*(unsigned char *)&one;
+                unsigned char *bytes = (unsigned char *)&val;
+                int ret = _PyLong_AsByteArray((PyLongObject *)v,
+                                              bytes, sizeof(val),
+                                              is_little, !is_unsigned);
+                Py_DECREF(v);
+                if (likely(!ret))
+                    return val;
+            }
+#endif
+            return (long) -1;
+        }
+    } else {
+        long val;
+        PyObject *tmp = __Pyx_PyNumber_Int(x);
+        if (!tmp) return (long) -1;
+        val = __Pyx_PyInt_As_long(tmp);
+        Py_DECREF(tmp);
+        return val;
+    }
+raise_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "value too large to convert to long");
+    return (long) -1;
+raise_neg_overflow:
+    PyErr_SetString(PyExc_OverflowError,
+        "can't convert negative value to long");
+    return (long) -1;
 }
 
 #if !CYTHON_COMPILING_IN_PYPY && PY_MAJOR_VERSION < 3
@@ -6478,111 +7592,6 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value) {
     }
 }
 
-static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
-    const long neg_one = (long) -1, const_zero = 0;
-    const int is_unsigned = neg_one > const_zero;
-#if PY_MAJOR_VERSION < 3
-    if (likely(PyInt_Check(x))) {
-        if (sizeof(long) < sizeof(long)) {
-            __PYX_VERIFY_RETURN_INT(long, long, PyInt_AS_LONG(x))
-        } else {
-            long val = PyInt_AS_LONG(x);
-            if (is_unsigned && unlikely(val < 0)) {
-                goto raise_neg_overflow;
-            }
-            return (long) val;
-        }
-    } else
-#endif
-    if (likely(PyLong_Check(x))) {
-        if (is_unsigned) {
-#if CYTHON_COMPILING_IN_CPYTHON && PY_MAJOR_VERSION >= 3
- #if CYTHON_USE_PYLONG_INTERNALS
-            switch (Py_SIZE(x)) {
-                case  0: return 0;
-                case  1: __PYX_VERIFY_RETURN_INT(long, digit, ((PyLongObject*)x)->ob_digit[0]);
-            }
- #endif
-#endif
-#if CYTHON_COMPILING_IN_CPYTHON
-            if (unlikely(Py_SIZE(x) < 0)) {
-                goto raise_neg_overflow;
-            }
-#else
-            {
-                int result = PyObject_RichCompareBool(x, Py_False, Py_LT);
-                if (unlikely(result < 0))
-                    return (long) -1;
-                if (unlikely(result == 1))
-                    goto raise_neg_overflow;
-            }
-#endif
-            if (sizeof(long) <= sizeof(unsigned long)) {
-                __PYX_VERIFY_RETURN_INT(long, unsigned long, PyLong_AsUnsignedLong(x))
-            } else if (sizeof(long) <= sizeof(unsigned PY_LONG_LONG)) {
-                __PYX_VERIFY_RETURN_INT(long, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
-            }
-        } else {
-#if CYTHON_COMPILING_IN_CPYTHON && PY_MAJOR_VERSION >= 3
- #if CYTHON_USE_PYLONG_INTERNALS
-            switch (Py_SIZE(x)) {
-                case  0: return 0;
-                case  1: __PYX_VERIFY_RETURN_INT(long,  digit, +(((PyLongObject*)x)->ob_digit[0]));
-                case -1: __PYX_VERIFY_RETURN_INT(long, sdigit, -(sdigit) ((PyLongObject*)x)->ob_digit[0]);
-            }
- #endif
-#endif
-            if (sizeof(long) <= sizeof(long)) {
-                __PYX_VERIFY_RETURN_INT(long, long, PyLong_AsLong(x))
-            } else if (sizeof(long) <= sizeof(PY_LONG_LONG)) {
-                __PYX_VERIFY_RETURN_INT(long, PY_LONG_LONG, PyLong_AsLongLong(x))
-            }
-        }
-        {
-#if CYTHON_COMPILING_IN_PYPY && !defined(_PyLong_AsByteArray)
-            PyErr_SetString(PyExc_RuntimeError,
-                            "_PyLong_AsByteArray() not available in PyPy, cannot convert large numbers");
-#else
-            long val;
-            PyObject *v = __Pyx_PyNumber_Int(x);
- #if PY_MAJOR_VERSION < 3
-            if (likely(v) && !PyLong_Check(v)) {
-                PyObject *tmp = v;
-                v = PyNumber_Long(tmp);
-                Py_DECREF(tmp);
-            }
- #endif
-            if (likely(v)) {
-                int one = 1; int is_little = (int)*(unsigned char *)&one;
-                unsigned char *bytes = (unsigned char *)&val;
-                int ret = _PyLong_AsByteArray((PyLongObject *)v,
-                                              bytes, sizeof(val),
-                                              is_little, !is_unsigned);
-                Py_DECREF(v);
-                if (likely(!ret))
-                    return val;
-            }
-#endif
-            return (long) -1;
-        }
-    } else {
-        long val;
-        PyObject *tmp = __Pyx_PyNumber_Int(x);
-        if (!tmp) return (long) -1;
-        val = __Pyx_PyInt_As_long(tmp);
-        Py_DECREF(tmp);
-        return val;
-    }
-raise_overflow:
-    PyErr_SetString(PyExc_OverflowError,
-        "value too large to convert to long");
-    return (long) -1;
-raise_neg_overflow:
-    PyErr_SetString(PyExc_OverflowError,
-        "can't convert negative value to long");
-    return (long) -1;
-}
-
 static int __Pyx_check_binary_version(void) {
     char ctversion[4], rtversion[4];
     PyOS_snprintf(ctversion, 4, "%d.%d", PY_MAJOR_VERSION, PY_MINOR_VERSION);
@@ -6597,6 +7606,87 @@ static int __Pyx_check_binary_version(void) {
     }
     return 0;
 }
+
+#ifndef __PYX_HAVE_RT_ImportModule
+#define __PYX_HAVE_RT_ImportModule
+static PyObject *__Pyx_ImportModule(const char *name) {
+    PyObject *py_name = 0;
+    PyObject *py_module = 0;
+    py_name = __Pyx_PyIdentifier_FromString(name);
+    if (!py_name)
+        goto bad;
+    py_module = PyImport_Import(py_name);
+    Py_DECREF(py_name);
+    return py_module;
+bad:
+    Py_XDECREF(py_name);
+    return 0;
+}
+#endif
+
+#ifndef __PYX_HAVE_RT_ImportType
+#define __PYX_HAVE_RT_ImportType
+static PyTypeObject *__Pyx_ImportType(const char *module_name, const char *class_name,
+    size_t size, int strict)
+{
+    PyObject *py_module = 0;
+    PyObject *result = 0;
+    PyObject *py_name = 0;
+    char warning[200];
+    Py_ssize_t basicsize;
+#ifdef Py_LIMITED_API
+    PyObject *py_basicsize;
+#endif
+    py_module = __Pyx_ImportModule(module_name);
+    if (!py_module)
+        goto bad;
+    py_name = __Pyx_PyIdentifier_FromString(class_name);
+    if (!py_name)
+        goto bad;
+    result = PyObject_GetAttr(py_module, py_name);
+    Py_DECREF(py_name);
+    py_name = 0;
+    Py_DECREF(py_module);
+    py_module = 0;
+    if (!result)
+        goto bad;
+    if (!PyType_Check(result)) {
+        PyErr_Format(PyExc_TypeError,
+            "%.200s.%.200s is not a type object",
+            module_name, class_name);
+        goto bad;
+    }
+#ifndef Py_LIMITED_API
+    basicsize = ((PyTypeObject *)result)->tp_basicsize;
+#else
+    py_basicsize = PyObject_GetAttrString(result, "__basicsize__");
+    if (!py_basicsize)
+        goto bad;
+    basicsize = PyLong_AsSsize_t(py_basicsize);
+    Py_DECREF(py_basicsize);
+    py_basicsize = 0;
+    if (basicsize == (Py_ssize_t)-1 && PyErr_Occurred())
+        goto bad;
+#endif
+    if (!strict && (size_t)basicsize > size) {
+        PyOS_snprintf(warning, sizeof(warning),
+            "%s.%s size changed, may indicate binary incompatibility",
+            module_name, class_name);
+        if (PyErr_WarnEx(NULL, warning, 0) < 0) goto bad;
+    }
+    else if ((size_t)basicsize != size) {
+        PyErr_Format(PyExc_ValueError,
+            "%.200s.%.200s has the wrong size, try recompiling",
+            module_name, class_name);
+        goto bad;
+    }
+    return (PyTypeObject *)result;
+bad:
+    Py_XDECREF(py_module);
+    Py_XDECREF(result);
+    return NULL;
+}
+#endif
 
 static int __Pyx_InitStrings(__Pyx_StringTabEntry *t) {
     while (t->p) {
