@@ -11,7 +11,7 @@ where you installed stuff) to the PATH variable:
 
 C:\Program Files (x86)\OptiTrack\Camera SDK\lib;C:\Python27\;C:\Python27\Scripts\
 
-Then open a console and pip install cython.
+Then open a console, write pip install cython and hit enter.
 
 
 To import the wrapped functionality into python, simply cd into your camerapy
