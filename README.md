@@ -6,8 +6,8 @@ We did this using Cython.
 
 To run our code we recommend to first download and install the OptiTrack SDK.
 Then install the Microsoft visual C++ compiler package for python 2.7, 
-then install Python 2.7.9 and add the following file adresses (or depending
-where you installed stuff) to the PATH variable:
+then install Python 2.7.9 (we used 32bit) and add the following file adresses
+(or depending where you installed stuff) to the PATH variable:
 
 C:\Program Files (x86)\OptiTrack\Camera SDK\lib;C:\Python27\;C:\Python27\Scripts\
 
