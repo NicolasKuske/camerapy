@@ -1,4 +1,4 @@
-# camerapy: The cython optitrack python wrapper project
+# camerapy: The cython optitrack camera python wrapper project
 
 In this project we wrapped some functionality from the OptiTrack Camera SDK
 in Python code. So to say creating a Python API from a C++ API.
